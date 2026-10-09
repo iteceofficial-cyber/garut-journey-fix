@@ -1,0 +1,135 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Helper Primitives
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'iteceofficial@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Helper: Valid Booking
+    function isValidBooking(data) {
+      return data.id is string && data.id.size() <= 64 &&
+        data.fullName is string && data.fullName.size() > 0 && data.fullName.size() <= 120 &&
+        data.whatsapp is string && data.whatsapp.size() > 0 && data.whatsapp.size() <= 40 &&
+        data.travelers is number && data.travelers > 0 && data.travelers <= 1000 &&
+        data.packageOrTour is string && data.packageOrTour.size() <= 200 &&
+        data.totalPrice is number && data.totalPrice >= 0 &&
+        data.paymentStatus in ['Menunggu Konfirmasi', 'Lunas', 'Selesai', 'Dibatalkan'] &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 120)) &&
+        (!('arrivalDate' in data) || (data.arrivalDate is string && data.arrivalDate.size() <= 30)) &&
+        (!('meetingTime' in data) || (data.meetingTime is string && data.meetingTime.size() <= 100)) &&
+        (!('meetingPoint' in data) || (data.meetingPoint is string && data.meetingPoint.size() <= 250)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 2000));
+    }
+
+    // Bookings collection
+    match /bookings/{bookingId} {
+      allow read: if true;
+      allow create: if isValidId(bookingId) && isValidBooking(incoming());
+      allow update: if isValidId(bookingId) && (isAdmin() || isValidBooking(incoming()));
+      allow delete: if isValidId(bookingId);
+    }
+
+    // Destinations collection
+    match /destinations/{destinationId} {
+      allow read: if true;
+      allow write: if isValidId(destinationId);
+    }
+
+    // Tour Packages collection
+    match /tourPackages/{packageId} {
+      allow read: if true;
+      allow write: if isValidId(packageId);
+    }
+
+    // City Tours collection
+    match /cityTours/{tourId} {
+      allow read: if true;
+      allow write: if isValidId(tourId);
+    }
+
+    // Tour Prices mapping
+    match /tourPrices/{priceId} {
+      allow read: if true;
+      allow write: if isValidId(priceId);
+    }
+
+    // Articles / Guide collection
+    match /articles/{articleId} {
+      allow read: if true;
+      allow write: if isValidId(articleId);
+    }
+
+    // Culinary dishes collection
+    match /culinary/{dishId} {
+      allow read: if true;
+      allow write: if isValidId(dishId);
+    }
+
+    // Gallery items collection
+    match /gallery/{itemId} {
+      allow read: if true;
+      allow write: if isValidId(itemId);
+    }
+
+    // Testimonials collection
+    match /testimonials/{testimonialId} {
+      allow read: if true;
+      allow write: if isValidId(testimonialId);
+    }
+
+    // Website Site Settings
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isValidId(settingId);
+    }
+
+    // Payment Gateway Settings
+    match /payments/{paymentId} {
+      allow read: if true;
+      allow write: if isValidId(paymentId);
+    }
+
+    // Traffic / Visitor Analytics
+    match /traffic/{recordId} {
+      allow read: if true;
+      allow write: if isValidId(recordId);
+    }
+
+    // Admin role verification document
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Health / connection test document
+    match /test/{docId} {
+      allow read: if true;
+    }
+  }
+}

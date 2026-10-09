@@ -1,0 +1,163 @@
+{
+  "entities": {
+    "Booking": {
+      "title": "Booking",
+      "description": "Customer tour booking and payment record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique booking identifier e.g. GJ-2610-8492" },
+        "createdAt": { "type": "string", "description": "ISO timestamp of creation" },
+        "fullName": { "type": "string", "description": "Full name of the traveler", "maxLength": 100 },
+        "email": { "type": "string", "description": "Email address of customer", "maxLength": 100 },
+        "whatsapp": { "type": "string", "description": "WhatsApp contact number", "maxLength": 30 },
+        "arrivalDate": { "type": "string", "description": "Date of arrival in Garut (YYYY-MM-DD)", "maxLength": 20 },
+        "travelDate": { "type": "string", "description": "Date of travel execution (YYYY-MM-DD)", "maxLength": 20 },
+        "meetingTime": { "type": "string", "description": "Meeting time at pickup point", "maxLength": 50 },
+        "meetingPoint": { "type": "string", "description": "Meeting location in Garut", "maxLength": 200 },
+        "travelers": { "type": "number", "description": "Number of participants" },
+        "packageOrTour": { "type": "string", "description": "Selected tour or package name", "maxLength": 150 },
+        "totalPrice": { "type": "number", "description": "Total price in Indonesian Rupiah" },
+        "paymentMethod": { "type": "string", "description": "Chosen payment method", "maxLength": 50 },
+        "paymentStatus": { "type": "string", "description": "Payment status", "enum": ["Menunggu Konfirmasi", "Lunas", "Selesai", "Dibatalkan"] },
+        "notes": { "type": "string", "description": "Special customer notes or requests", "maxLength": 1000 }
+      },
+      "required": ["id", "createdAt", "fullName", "whatsapp", "travelers", "packageOrTour", "totalPrice", "paymentStatus"]
+    },
+    "Destination": {
+      "title": "Destination",
+      "description": "Tourist destination in Garut",
+      "type": "object",
+      "properties": {
+        "slug": { "type": "string", "description": "Unique URL slug" },
+        "name": { "type": "string", "description": "Destination name", "maxLength": 100 },
+        "category": { "type": "string", "description": "Destination category", "maxLength": 50 },
+        "tagline": { "type": "string", "description": "Short catchy description", "maxLength": 200 },
+        "description": { "type": "string", "description": "Full description of destination", "maxLength": 2000 },
+        "image": { "type": "string", "description": "Image file or URL", "maxLength": 500 },
+        "location": { "type": "string", "description": "Location description", "maxLength": 200 },
+        "mapsUrl": { "type": "string", "description": "Google Maps search link", "maxLength": 500 },
+        "rating": { "type": "number", "description": "Review rating 1-5" },
+        "entryFee": { "type": "string", "description": "Ticket entry price", "maxLength": 100 }
+      },
+      "required": ["slug", "name", "category", "tagline", "image"]
+    },
+    "TourPackage": {
+      "title": "TourPackage",
+      "description": "Packaged tour offering",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Package identifier" },
+        "name": { "type": "string", "description": "Package name", "maxLength": 150 },
+        "duration": { "type": "string", "description": "Duration in days/hours", "maxLength": 50 },
+        "price": { "type": "number", "description": "Price per pax in IDR" },
+        "priceLabel": { "type": "string", "description": "Formatted price label", "maxLength": 50 },
+        "description": { "type": "string", "description": "Description of package", "maxLength": 1000 },
+        "image": { "type": "string", "description": "Package cover image", "maxLength": 500 },
+        "badge": { "type": "string", "description": "Badge highlight", "maxLength": 50 }
+      },
+      "required": ["id", "name", "price"]
+    },
+    "CityTour": {
+      "title": "CityTour",
+      "description": "City tour itinerary offering",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "City tour ID" },
+        "name": { "type": "string", "description": "Tour title", "maxLength": 150 },
+        "duration": { "type": "string", "description": "Duration of tour", "maxLength": 50 },
+        "price": { "type": "number", "description": "Base price" },
+        "priceLabel": { "type": "string", "description": "Price label display", "maxLength": 50 },
+        "description": { "type": "string", "description": "Tour summary", "maxLength": 1000 },
+        "image": { "type": "string", "description": "Tour image", "maxLength": 500 }
+      },
+      "required": ["id", "name", "price"]
+    },
+    "Article": {
+      "title": "Article",
+      "description": "Travel guide blog article",
+      "type": "object",
+      "properties": {
+        "slug": { "type": "string", "description": "URL slug" },
+        "title": { "type": "string", "description": "Article headline", "maxLength": 200 },
+        "category": { "type": "string", "description": "Topic category", "maxLength": 50 },
+        "image": { "type": "string", "description": "Featured image", "maxLength": 500 },
+        "date": { "type": "string", "description": "Publication date", "maxLength": 30 },
+        "readingTime": { "type": "string", "description": "Estimated reading duration", "maxLength": 30 },
+        "excerpt": { "type": "string", "description": "Summary teaser", "maxLength": 500 }
+      },
+      "required": ["slug", "title", "category", "image"]
+    },
+    "Testimonial": {
+      "title": "Testimonial",
+      "description": "Customer review and feedback",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Review ID" },
+        "name": { "type": "string", "description": "Reviewer name", "maxLength": 100 },
+        "from": { "type": "string", "description": "Reviewer origin city", "maxLength": 100 },
+        "text": { "type": "string", "description": "Review text comment", "maxLength": 1000 },
+        "rating": { "type": "number", "description": "Star rating 1 to 5" },
+        "tour": { "type": "string", "description": "Tour taken", "maxLength": 150 }
+      },
+      "required": ["id", "name", "text", "rating"]
+    },
+    "SiteSettings": {
+      "title": "SiteSettings",
+      "description": "Website global configuration and content",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Site brand name", "maxLength": 100 },
+        "tagline": { "type": "string", "description": "Brand slogan", "maxLength": 200 },
+        "whatsapp": { "type": "string", "description": "WhatsApp display phone", "maxLength": 50 },
+        "email": { "type": "string", "description": "Official email address", "maxLength": 100 },
+        "address": { "type": "string", "description": "Office address", "maxLength": 250 },
+        "updatedAt": { "type": "string", "description": "Last updated timestamp", "maxLength": 50 }
+      },
+      "required": ["name"]
+    },
+    "PaymentSettings": {
+      "title": "PaymentSettings",
+      "description": "Payment gateway bank accounts and QRIS details",
+      "type": "object",
+      "properties": {
+        "whatsappAdmin": { "type": "string", "description": "Admin WhatsApp digits", "maxLength": 30 },
+        "updatedAt": { "type": "string", "description": "Last updated timestamp", "maxLength": 50 }
+      },
+      "required": ["whatsappAdmin"]
+    }
+  },
+  "firestore": {
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Client trip bookings and payment submissions"
+    },
+    "/destinations/{destinationId}": {
+      "schema": "Destination",
+      "description": "Garut tourism destinations"
+    },
+    "/tourPackages/{packageId}": {
+      "schema": "TourPackage",
+      "description": "Tour packages"
+    },
+    "/cityTours/{tourId}": {
+      "schema": "CityTour",
+      "description": "City tour options"
+    },
+    "/articles/{articleId}": {
+      "schema": "Article",
+      "description": "Travel guide and blog articles"
+    },
+    "/testimonials/{testimonialId}": {
+      "schema": "Testimonial",
+      "description": "Customer testimonials"
+    },
+    "/settings/{settingId}": {
+      "schema": "SiteSettings",
+      "description": "Global website settings"
+    },
+    "/payments/{paymentId}": {
+      "schema": "PaymentSettings",
+      "description": "Payment gateway configuration"
+    }
+  }
+}

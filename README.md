@@ -1,11 +1,11 @@
-<div align="center">
+# GARUT JOURNEY
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+Premium tourism landing site for Garut Journey — "Explore Garut, Feel the Story."
 
-  <h1>Built with AI Studio</h2>
+**Stack:** TanStack Start (React 19), Tailwind CSS 4, Netlify Forms, Netlify Image CDN, AI-generated imagery in `public/img`.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+**Run locally:** `pnpm install` then `netlify dev` (or `pnpm dev`).
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+Content lives in `src/data/*.ts` (destinations, tours, culinary, articles, gallery, testimonials, experiences, site details) — edit there to update the site.
 
-</div>
+**Roadmap:** see [PLAN.md](PLAN.md) — destination/article detail pages next, then real content, bookings, accounts and payments.

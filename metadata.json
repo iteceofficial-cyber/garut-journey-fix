@@ -1,0 +1,7 @@
+{
+  "name": "Garut Journey",
+  "description": "Garut Journey tourism website showcasing destinations, culinary delights, tour packages, and travel guides in Garut, Indonesia.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
