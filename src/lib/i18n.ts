@@ -10,11 +10,11 @@ export interface LanguageOption {
 }
 
 export const SUPPORTED_LANGUAGES: LanguageOption[] = [
-  { code: 'id', label: 'Indonesia', flag: '🇮🇩', dir: 'ltr' },
+  { code: 'id', label: 'Bahasa Indonesia', flag: '🇮🇩', dir: 'ltr' },
   { code: 'en', label: 'English', flag: '🇬🇧', dir: 'ltr' },
-  { code: 'zh', label: 'Mandarin (中文)', flag: '🇨🇳', dir: 'ltr' },
-  { code: 'ja', label: '日本語', flag: '🇯🇵', dir: 'ltr' },
-  { code: 'ar', label: 'العربية', flag: '🇸🇦', dir: 'rtl' },
+  { code: 'zh', label: 'Bahasa Mandarin (中文)', flag: '🇨🇳', dir: 'ltr' },
+  { code: 'ja', label: '日本語 (Jepang)', flag: '🇯🇵', dir: 'ltr' },
+  { code: 'ar', label: 'العربية (Arab)', flag: '🇸🇦', dir: 'rtl' },
 ]
 
 export const translations = {

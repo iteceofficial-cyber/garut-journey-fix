@@ -45,6 +45,7 @@ function KwitansiDetailPage() {
   })
   const [loading, setLoading] = useState(() => !booking)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [downloadSuccess, setDownloadSuccess] = useState(false)
   const [copied, setCopied] = useState(false)
   const [searchId, setSearchId] = useState('')
   const [allBookings, setAllBookings] = useState<Booking[]>(() => getStoredBookings())
@@ -390,16 +391,24 @@ function generateVectorKwitansiPdf(booking: Booking, profile: typeof COMPANY_PRO
       const pdf = generateVectorKwitansiPdf(booking, p)
       const fileName = `Kwitansi-${booking.id}.pdf`
 
-      // Direct file download using browser Blob URL
-      const blob = pdf.output('blob')
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = fileName
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      setTimeout(() => URL.revokeObjectURL(url), 3000)
+      // 1. Primary: native jsPDF save method
+      try {
+        pdf.save(fileName)
+      } catch (_saveErr) {
+        // 2. Secondary fallback: Blob URL
+        const blob = pdf.output('blob')
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = fileName
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        setTimeout(() => URL.revokeObjectURL(url), 5000)
+      }
+
+      setDownloadSuccess(true)
+      setTimeout(() => setDownloadSuccess(false), 5000)
     } catch (err) {
       console.error('Error generating PDF:', err)
       window.print()
@@ -408,18 +417,58 @@ function generateVectorKwitansiPdf(booking: Booking, profile: typeof COMPANY_PRO
     }
   }
 
+  // Auto-download trigger if consumer opened link with ?download=true or ?action=download
+  useEffect(() => {
+    if (!booking || typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const shouldDownload =
+      params.get('download') === 'true' ||
+      params.get('download') === '1' ||
+      params.get('download') === 'pdf' ||
+      params.get('action') === 'download'
+
+    if (shouldDownload && !downloadingPdf) {
+      const timer = setTimeout(() => {
+        handleDownloadPdf()
+      }, 700)
+      return () => clearTimeout(timer)
+    }
+  }, [booking?.id])
+
   const handlePrint = () => {
     if (typeof window !== 'undefined') {
       window.print()
     }
   }
 
-  const handleCopyLink = () => {
-    if (typeof window !== 'undefined') {
-      navigator.clipboard.writeText(window.location.href)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2500)
+  const handleCopyLink = async () => {
+    if (typeof window === 'undefined') return
+    const url = window.location.href
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url)
+      } else {
+        throw new Error('Clipboard API unavailable')
+      }
+    } catch {
+      // Fallback using textarea
+      const textArea = document.createElement('textarea')
+      textArea.value = url
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-999999px'
+      textArea.style.top = '-999999px'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      try {
+        document.execCommand('copy')
+      } catch (_err) {
+        // ignore
+      }
+      document.body.removeChild(textArea)
     }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2500)
   }
 
   if (loading && !booking) {
@@ -518,12 +567,25 @@ function generateVectorKwitansiPdf(booking: Booking, profile: typeof COMPANY_PRO
   const isPaid = booking.paymentStatus === 'Lunas' || booking.paymentStatus === 'Selesai'
 
   return (
-    <div className="min-h-screen bg-cream py-8 sm:py-12 px-3 sm:px-6">
+    <div className="min-h-screen bg-cream py-6 sm:py-10 px-3 sm:px-6 relative">
+      {/* Explicitly guarantee site header & navbar can never overlap or display on kwitansi */}
+      <style>{`
+        header, [aria-label="Main"], nav[aria-label="Main"], #mobile-nav, header.fixed {
+          display: none !important;
+          pointer-events: none !important;
+          visibility: hidden !important;
+        }
+        body {
+          padding-top: 0 !important;
+          margin-top: 0 !important;
+        }
+      `}</style>
+
       {/* Top Action Bar (Hidden on Print & PDF Export) */}
-      <div className="mx-auto max-w-3xl mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
+      <div className="relative z-30 mx-auto max-w-3xl mb-4 flex flex-wrap items-center justify-between gap-2.5 print:hidden">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-bold text-forest shadow-soft hover:bg-cream-200 transition"
+          className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-bold text-forest shadow-soft hover:bg-cream-200 transition border border-ink/10 cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Kembali ke Beranda</span>
@@ -535,8 +597,8 @@ function generateVectorKwitansiPdf(booking: Booking, profile: typeof COMPANY_PRO
             type="button"
             disabled={downloadingPdf}
             onClick={handleDownloadPdf}
-            className="inline-flex items-center gap-2 rounded-full bg-forest px-4 py-2 text-xs font-bold text-white shadow-soft hover:bg-forest-700 transition disabled:opacity-60 cursor-pointer"
-            title="Unduh kwitansi resmi sebagai file PDF"
+            className="inline-flex items-center gap-2 rounded-full bg-forest px-4 py-2 text-xs font-bold text-white shadow-soft hover:bg-forest-700 transition disabled:opacity-60 cursor-pointer active:scale-95"
+            title="Unduh kwitansi resmi sebagai file PDF langsung ke perangkat"
           >
             {downloadingPdf ? (
               <>
@@ -554,7 +616,7 @@ function generateVectorKwitansiPdf(booking: Booking, profile: typeof COMPANY_PRO
           <button
             type="button"
             onClick={handlePrint}
-            className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-xs font-bold text-ink shadow-soft hover:bg-cream-200 transition"
+            className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-xs font-bold text-ink shadow-soft hover:bg-cream-200 transition border border-ink/10 cursor-pointer active:scale-95"
             title="Cetak langsung ke printer atau dialog print browser"
           >
             <Printer className="h-3.5 w-3.5 text-forest" />
@@ -564,10 +626,10 @@ function generateVectorKwitansiPdf(booking: Booking, profile: typeof COMPANY_PRO
           <button
             type="button"
             onClick={handleCopyLink}
-            className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-xs font-bold text-ink shadow-soft hover:bg-cream-200 transition"
+            className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-xs font-bold text-ink shadow-soft hover:bg-cream-200 transition border border-ink/10 cursor-pointer active:scale-95"
             title="Salin link kwitansi untuk dibagikan ke client (tanpa login)"
           >
-            <Copy className="h-3.5 w-3.5" />
+            <Copy className="h-3.5 w-3.5 text-forest" />
             <span>{copied ? 'Tautan Disalin!' : 'Salin Tautan'}</span>
           </button>
 
@@ -577,12 +639,68 @@ function generateVectorKwitansiPdf(booking: Booking, profile: typeof COMPANY_PRO
             )}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-3.5 py-2 text-xs font-bold text-white shadow-soft hover:bg-[#1ebd59] transition"
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-3.5 py-2 text-xs font-bold text-white shadow-soft hover:bg-[#1ebd59] transition cursor-pointer active:scale-95"
           >
             <MessageCircle className="h-3.5 w-3.5" />
             <span>Konfirmasi Admin WA</span>
           </a>
         </div>
+      </div>
+
+      {/* Download Alert Toast when file is saved */}
+      {downloadSuccess && (
+        <div className="relative z-30 mx-auto max-w-3xl mb-4 rounded-2xl bg-emerald-700 text-white p-3.5 text-xs font-semibold shadow-lift flex items-center justify-between gap-3 animate-fade-in print:hidden">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-emerald-200 shrink-0" />
+            <span>Kwitansi resmi (PDF) berhasil diunduh ke perangkat Anda!</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDownloadSuccess(false)}
+            className="text-white/80 hover:text-white font-bold"
+          >
+            Tutup
+          </button>
+        </div>
+      )}
+
+      {/* Prominent Direct Download Card for Consumers */}
+      <div className="relative z-20 mx-auto max-w-3xl mb-6 rounded-3xl bg-forest p-4 sm:p-5 text-white shadow-lift flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 print:hidden border border-forest-700">
+        <div className="flex items-center gap-3.5">
+          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white/15 text-cream shrink-0">
+            <FileCheck className="h-6 w-6 text-emerald-300" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm sm:text-base">Kwitansi Pembayaran Resmi</span>
+              <span className="rounded-full bg-emerald-400/20 border border-emerald-400/40 px-2 py-0.5 text-[0.65rem] font-bold text-emerald-200 uppercase">
+                Lunas & Terverifikasi
+              </span>
+            </div>
+            <p className="text-xs text-white/80 mt-0.5">
+              Halo, <strong className="text-white">{booking.fullName}</strong>! Klik tombol unduh untuk menyimpan file PDF kwitansi resmi ke galeri/dokumen ponsel Anda.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          disabled={downloadingPdf}
+          onClick={handleDownloadPdf}
+          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-ember px-5 py-3 text-xs sm:text-sm font-bold text-white shadow-lift hover:bg-ember-600 transition disabled:opacity-60 cursor-pointer shrink-0 w-full sm:w-auto active:scale-95"
+        >
+          {downloadingPdf ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Mengunduh PDF...</span>
+            </>
+          ) : (
+            <>
+              <Download className="h-4 w-4" />
+              <span>Download PDF Sekarang</span>
+            </>
+          )}
+        </button>
       </div>
 
       {/* Main Kwitansi Document (No bulky header, clean receipt document) */}

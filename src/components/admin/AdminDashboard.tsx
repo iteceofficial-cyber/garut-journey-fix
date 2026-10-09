@@ -838,9 +838,23 @@ export function AdminDashboard() {
   }
 
   const copyKwitansiLink = (bookingId: string) => {
-    const kwitansiUrl = `${window.location.origin}/kwitansi/${bookingId}`
-    navigator.clipboard.writeText(kwitansiUrl)
-    notifySuccess(`Link download kwitansi #${bookingId} disalin! (Client dapat buka & unduh tanpa perlu login)`)
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://garutjourney.com'
+    const kwitansiUrl = `${origin}/kwitansi/${bookingId}?download=true`
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(kwitansiUrl)
+      } else {
+        const textArea = document.createElement('textarea')
+        textArea.value = kwitansiUrl
+        document.body.appendChild(textArea)
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+      }
+    } catch {
+      // ignore
+    }
+    notifySuccess(`Link download kwitansi #${bookingId} disalin! (Konsumen dapat klik & langsung download PDF tanpa login)`)
   }
 
   const handleDeleteBooking = async (bookingId: string) => {
@@ -882,13 +896,18 @@ Tim kami siap menyambut kedatangan Anda di Garut! Ada hal yang ingin dipersiapka
   const sendKwitansiViaWhatsApp = (b: Booking) => {
     const rawNumber = b.whatsapp.replace(/\D/g, '')
     const phone = rawNumber.startsWith('0') ? '62' + rawNumber.slice(1) : rawNumber
-    const kwitansiUrl = `${window.location.origin}/kwitansi/${b.id}`
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://garutjourney.com'
+    const directDownloadUrl = `${origin}/kwitansi/${b.id}?download=true`
+    const onlineUrl = `${origin}/kwitansi/${b.id}`
     const text = `Halo Kak ${b.fullName}, terima kasih! Pembayaran Anda sebesar ${formatRupiah(b.totalPrice)} untuk paket "${b.packageOrTour}" telah kami konfirmasi LUNAS. ✅
 
-Berikut adalah tautan resmi Kwitansi Bukti Pembayaran Lunas (PDF) Anda:
-${kwitansiUrl}
+Berikut adalah tautan resmi untuk MENGUNDUH KWITANSI RESMI (PDF):
+📥 ${directDownloadUrl}
 
-📄 Catatan Penting:
+Atau lihat kwitansi secara online:
+📄 ${onlineUrl}
+
+ℹ️ Catatan Penting:
 Kwitansi ini dapat langsung dibuka dan diunduh (PDF) melalui link di atas tanpa perlu login ke sistem. Simpan bukti ini untuk ditunjukkan kepada tour guide / driver kami saat penjemputan di meeting point (${b.meetingPoint || 'Garut'}).
 
 Sampai jumpa di Garut!

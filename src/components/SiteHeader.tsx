@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useRouterState } from '@tanstack/react-router'
 import { ChevronDown, Globe, Menu, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { navLinks } from '@/data/site'
@@ -8,32 +8,32 @@ import { useLanguage } from '@/lib/i18n'
 import { useSiteSettings } from '@/lib/siteSettings'
 import { handleNavClick } from '@/lib/nav'
 
-function getTranslatedLabel(label: string, t: any): string {
+function getTranslatedLabel(label: string, t: any, lang?: string): string {
   switch (label.toLowerCase()) {
     case 'home':
-      return t.nav.home
+      return t.nav?.home || 'Beranda'
     case 'destinations':
-      return t.nav.destinations
+      return t.nav?.destinations || 'Destinasi'
     case 'city tours':
-      return t.nav.cityTours
+      return t.nav?.cityTours || 'Paket Tour'
     case 'culinary':
-      return t.nav.culinary
+      return t.nav?.culinary || 'Kuliner'
     case 'itinerary':
-      return t.nav.itinerary
+      return t.nav?.itinerary || 'Itinerary'
     case 'team guide':
-      return 'Tim & Guide'
+      return lang === 'zh' ? '向导团队' : lang === 'en' ? 'Team Guides' : lang === 'ja' ? 'ガイドチーム' : 'Tim & Guide'
     case 'tentang kami':
-      return 'Tentang Kami'
+      return lang === 'zh' ? '关于我们' : lang === 'en' ? 'About Us' : lang === 'ja' ? '私たちについて' : 'Tentang Kami'
     case 'gallery':
-      return t.nav.gallery
+      return t.nav?.gallery || 'Galeri'
     case 'reviews':
-      return t.nav.reviews || 'Ulasan'
+      return t.nav?.reviews || (lang === 'zh' ? '游客评价' : lang === 'en' ? 'Guest Reviews' : lang === 'ja' ? 'お客様の声' : 'Ulasan')
     case 'login admin':
-      return t.nav.loginAdmin
+      return t.nav?.loginAdmin || 'Login Admin'
     case 'travel guide':
-      return t.nav.travelGuide
+      return t.nav?.travelGuide || 'Panduan Wisata'
     case 'contact':
-      return t.nav.contact
+      return t.nav?.contact || 'Kontak'
     default:
       return label
   }
@@ -170,18 +170,26 @@ function MoreDropdown({ solid }: { solid: boolean }) {
 
 /** Sticky navigation with dynamic language, animation and mobile drawer. */
 export function SiteHeader({ overHero = false }: { overHero?: boolean }) {
-  if (typeof window !== 'undefined') {
-    const path = window.location.pathname
-    if (
-      path.startsWith('/admin') ||
-      path.startsWith('/wp-admin') ||
-      path.startsWith('/login') ||
-      path.startsWith('/kwitansi')
-    ) {
-      return null
-    }
+  const routerState = useRouterState()
+  const pathname =
+    routerState.location?.pathname ||
+    (typeof window !== 'undefined' ? window.location.pathname : '')
+
+  const isHidden =
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/wp-admin') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/kwitansi') ||
+    pathname.includes('/kwitansi')
+
+  if (isHidden) {
+    return null
   }
 
+  return <SiteHeaderInner overHero={overHero} />
+}
+
+function SiteHeaderInner({ overHero = false }: { overHero?: boolean }) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const { lang, switchLanguage, supportedLanguages, t } = useLanguage()

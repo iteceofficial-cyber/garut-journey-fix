@@ -72,23 +72,23 @@ function NotFound() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const routerState = useRouterState()
+  const routerPath = routerState?.location?.pathname || ''
+  const windowPath = typeof window !== 'undefined' ? window.location.pathname : ''
+  const pathname = routerPath || windowPath || ''
   const isKwitansi =
     pathname.startsWith('/kwitansi') ||
-    (typeof window !== 'undefined' &&
-      (window.location.pathname.startsWith('/kwitansi') || window.location.pathname.includes('/kwitansi')))
+    pathname.includes('/kwitansi') ||
+    windowPath.startsWith('/kwitansi') ||
+    windowPath.includes('/kwitansi')
   const isBrowserAdmin =
-    typeof window !== 'undefined' &&
-    (window.location.pathname.startsWith('/admin') ||
-      window.location.pathname.startsWith('/wp-admin') ||
-      window.location.pathname.startsWith('/login') ||
-      window.location.pathname.startsWith('/kwitansi'))
-  const isAdminPage =
     pathname.startsWith('/admin') ||
     pathname.startsWith('/wp-admin') ||
     pathname.startsWith('/login') ||
-    isKwitansi ||
-    Boolean(isBrowserAdmin)
+    windowPath.startsWith('/admin') ||
+    windowPath.startsWith('/wp-admin') ||
+    windowPath.startsWith('/login')
+  const isAdminPage = isKwitansi || Boolean(isBrowserAdmin)
   const { lang, isRtl } = useLanguage()
 
   const { seo } = useSeoSettings()
