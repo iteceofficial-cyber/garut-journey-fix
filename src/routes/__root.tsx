@@ -73,6 +73,10 @@ function NotFound() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const isKwitansi =
+    pathname.startsWith('/kwitansi') ||
+    (typeof window !== 'undefined' &&
+      (window.location.pathname.startsWith('/kwitansi') || window.location.pathname.includes('/kwitansi')))
   const isBrowserAdmin =
     typeof window !== 'undefined' &&
     (window.location.pathname.startsWith('/admin') ||
@@ -83,7 +87,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     pathname.startsWith('/admin') ||
     pathname.startsWith('/wp-admin') ||
     pathname.startsWith('/login') ||
-    pathname.startsWith('/kwitansi') ||
+    isKwitansi ||
     Boolean(isBrowserAdmin)
   const { lang, isRtl } = useLanguage()
 

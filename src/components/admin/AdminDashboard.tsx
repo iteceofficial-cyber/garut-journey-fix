@@ -828,6 +828,15 @@ export function AdminDashboard() {
     }
   }
 
+  const handleConfirmPaymentAndSendKwitansi = async (b: Booking) => {
+    await updateStatus(b.id, 'Lunas')
+    notifySuccess(`Status booking #${b.id} dikonfirmasi "Lunas" & tautan kwitansi dikirim ke WhatsApp client!`)
+    sendKwitansiViaWhatsApp({ ...b, paymentStatus: 'Lunas' })
+    if (selectedBookingDetail?.id === b.id) {
+      setSelectedBookingDetail({ ...selectedBookingDetail, paymentStatus: 'Lunas' })
+    }
+  }
+
   const copyKwitansiLink = (bookingId: string) => {
     const kwitansiUrl = `${window.location.origin}/kwitansi/${bookingId}`
     navigator.clipboard.writeText(kwitansiUrl)
@@ -1487,6 +1496,19 @@ Tim Garut Journey`
 
                       {/* Action Controls */}
                       <div className="flex flex-wrap items-center gap-2 pt-3 lg:pt-0 border-t lg:border-t-0 border-ink/10">
+                        {/* Quick Confirm & Send Button */}
+                        {b.paymentStatus === 'Menunggu Konfirmasi' && (
+                          <button
+                            type="button"
+                            onClick={() => handleConfirmPaymentAndSendKwitansi(b)}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-forest px-3 py-1.5 text-xs font-bold text-white hover:bg-forest-700 transition shadow-sm"
+                            title="Konfirmasi pembayaran Lunas dan langsung kirim link kwitansi resmi ke WA client"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
+                            <span>Konfirmasi Lunas &amp; Kirim Kwitansi</span>
+                          </button>
+                        )}
+
                         {/* Status Dropdown */}
                         <select
                           value={b.paymentStatus}
@@ -4306,12 +4328,24 @@ Tim Garut Journey`
                 )}
               </div>
 
-              <div className="pt-2 flex flex-col sm:flex-row gap-2">
+              <div className="pt-2 flex flex-col sm:flex-row flex-wrap gap-2">
+                {selectedBookingDetail.paymentStatus === 'Menunggu Konfirmasi' && (
+                  <button
+                    type="button"
+                    onClick={() => handleConfirmPaymentAndSendKwitansi(selectedBookingDetail)}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-forest py-2.5 px-3.5 text-xs font-bold text-white hover:bg-forest-700 transition shadow-sm"
+                    title="Konfirmasi pembayaran dan kirim kwitansi ke WhatsApp client"
+                  >
+                    <CheckCircle2 className="h-4 w-4 text-emerald-300" />
+                    <span>Konfirmasi Lunas &amp; Kirim Kwitansi</span>
+                  </button>
+                )}
+
                 <a
                   href={`/kwitansi/${selectedBookingDetail.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-forest py-2.5 px-3.5 text-xs font-bold text-white hover:bg-forest-700 transition"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-forest/10 py-2.5 px-3.5 text-xs font-bold text-forest hover:bg-forest hover:text-white transition"
                 >
                   <FileText className="h-4 w-4" />
                   <span>Buka Kwitansi PDF</span>

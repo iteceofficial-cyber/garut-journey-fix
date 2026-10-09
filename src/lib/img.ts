@@ -24,7 +24,8 @@ export function img(file?: string | null, _width = 1200) {
   ) {
     return trimmed
   }
-  return trimmed.startsWith('/') ? trimmed : `/img/${trimmed}`
+  const clean = trimmed.replace(/^\/+/, '').replace(/^img\/+/, '')
+  return `/img/${clean}`
 }
 
 /**

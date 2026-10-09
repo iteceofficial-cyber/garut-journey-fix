@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore'
+import { getFirestore } from 'firebase/firestore'
 import firebaseConfig from '../../firebase-applet-config.json'
 
 export const app = getApps().length ? getApp() : initializeApp(firebaseConfig)
@@ -73,18 +73,5 @@ export function logFirestoreError(error: unknown, operationType: OperationType, 
     operationType,
     path,
   }
-  console.warn('Firestore Notice: ', JSON.stringify(errInfo))
   return errInfo
-}
-
-// Connection test on boot (client-side only)
-if (typeof window !== 'undefined') {
-  async function testConnection() {
-    try {
-      await getDocFromServer(doc(db, 'test', 'connection'))
-    } catch {
-      // Connection verification passed
-    }
-  }
-  testConnection()
 }

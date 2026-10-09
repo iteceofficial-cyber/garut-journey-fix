@@ -12,7 +12,7 @@ export interface LanguageOption {
 export const SUPPORTED_LANGUAGES: LanguageOption[] = [
   { code: 'id', label: 'Indonesia', flag: '🇮🇩', dir: 'ltr' },
   { code: 'en', label: 'English', flag: '🇬🇧', dir: 'ltr' },
-  { code: 'zh', label: '中文 (Mandarin)', flag: '🇨🇳', dir: 'ltr' },
+  { code: 'zh', label: 'Mandarin (中文)', flag: '🇨🇳', dir: 'ltr' },
   { code: 'ja', label: '日本語', flag: '🇯🇵', dir: 'ltr' },
   { code: 'ar', label: 'العربية', flag: '🇸🇦', dir: 'rtl' },
 ]

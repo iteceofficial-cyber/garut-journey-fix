@@ -74,7 +74,7 @@ function LanguageSelector({ solid }: { solid: boolean }) {
       </button>
 
       {openDropdown && (
-        <div className="absolute right-0 mt-2 w-36 rounded-2xl bg-white p-1.5 shadow-2xl ring-1 ring-ink/10 z-50 animate-fade-in text-ink">
+        <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-white p-1.5 shadow-2xl ring-1 ring-ink/10 z-50 animate-fade-in text-ink">
           {supportedLanguages.map((opt) => (
             <button
               key={opt.code}
@@ -172,7 +172,12 @@ function MoreDropdown({ solid }: { solid: boolean }) {
 export function SiteHeader({ overHero = false }: { overHero?: boolean }) {
   if (typeof window !== 'undefined') {
     const path = window.location.pathname
-    if (path.startsWith('/admin') || path.startsWith('/wp-admin') || path.startsWith('/login')) {
+    if (
+      path.startsWith('/admin') ||
+      path.startsWith('/wp-admin') ||
+      path.startsWith('/login') ||
+      path.startsWith('/kwitansi')
+    ) {
       return null
     }
   }
@@ -324,25 +329,29 @@ export function SiteHeader({ overHero = false }: { overHero?: boolean }) {
 
         <nav aria-label="Mobile" className="px-6 py-4 pb-12">
           {/* Mobile Language Switcher Bar */}
-          <div className="mb-6 rounded-2xl bg-white/10 p-2.5 flex items-center justify-between">
+          <div className="mb-6 rounded-2xl bg-white/10 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="flex items-center gap-2 text-xs font-semibold text-cream/70">
               <Globe className="h-4 w-4 text-ember" />
-              <span>Pilih Bahasa:</span>
+              <span>Pilih Bahasa (Language):</span>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1.5">
               {supportedLanguages.map((opt) => (
                 <button
                   key={opt.code}
                   type="button"
                   onClick={() => switchLanguage(opt.code)}
-                  className={`rounded-xl px-2.5 py-1 text-xs font-bold transition flex items-center gap-1 ${
+                  className={`rounded-xl px-2.5 py-1 text-xs font-bold transition flex items-center gap-1.5 ${
                     lang === opt.code
                       ? 'bg-ember text-white shadow-sm'
-                      : 'bg-white/5 text-cream/70 hover:bg-white/15'
+                      : 'bg-white/5 text-cream/80 hover:bg-white/15'
                   }`}
+                  title={opt.label}
                 >
                   <span>{opt.flag}</span>
                   <span className="uppercase">{opt.code}</span>
+                  <span className="text-[0.65rem] opacity-75 font-normal">
+                    {opt.code === 'zh' ? '中文' : ''}
+                  </span>
                 </button>
               ))}
             </div>

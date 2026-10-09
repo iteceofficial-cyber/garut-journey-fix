@@ -25,7 +25,6 @@ import { whatsappLink } from '@/data/site'
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 
 export const Route = createFileRoute('/kwitansi/$id')({
   component: KwitansiDetailPage,
@@ -111,8 +110,8 @@ function KwitansiDetailPage() {
             return
           }
         }
-      } catch (err) {
-        console.warn('Firestore fetch notice:', err)
+      } catch (_err) {
+        // Handled silently
       }
 
       if (isMounted) {
@@ -127,53 +126,282 @@ function KwitansiDetailPage() {
     }
   }, [id])
 
+function generateVectorKwitansiPdf(booking: Booking, profile: typeof COMPANY_PROFILE) {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  })
+
+  const pageWidth = 210
+  const margin = 14
+  const contentWidth = pageWidth - margin * 2 // 182mm
+
+  // Background subtle tint
+  doc.setFillColor(247, 245, 239)
+  doc.rect(0, 0, 210, 297, 'F')
+
+  // Main white receipt card
+  doc.setFillColor(255, 255, 255)
+  doc.roundedRect(margin, margin, contentWidth, 269, 3, 3, 'F')
+  doc.setDrawColor(218, 224, 219)
+  doc.setLineWidth(0.4)
+  doc.roundedRect(margin, margin, contentWidth, 269, 3, 3, 'S')
+
+  // Top header banner (Forest Green #1F5D42)
+  doc.setFillColor(31, 93, 66)
+  doc.roundedRect(margin, margin, contentWidth, 26, 3, 3, 'F')
+  // Square off bottom of the banner
+  doc.rect(margin, margin + 20, contentWidth, 6, 'F')
+
+  // Brand title in banner
+  doc.setTextColor(245, 239, 227)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(15)
+  doc.text('GARUT JOURNEY', margin + 8, margin + 11)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8.5)
+  doc.setTextColor(216, 235, 225)
+  doc.text(
+    `${profile.legalName.toUpperCase()} • RESMI & TERVERIFIKASI`,
+    margin + 8,
+    margin + 18
+  )
+
+  // Document Title
+  doc.setTextColor(23, 35, 29)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(15)
+  doc.text('KWITANSI PEMBAYARAN LUNAS', margin + 8, margin + 37)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8.5)
+  doc.setTextColor(100, 110, 105)
+  doc.text('Official Payment Receipt • Garut City Tour', margin + 8, margin + 43)
+
+  // Receipt Number & Date Box (Top right)
+  const metaBoxX = 135
+  const metaBoxY = margin + 30
+  const metaBoxW = 47
+  const metaBoxH = 17
+  doc.setFillColor(246, 248, 246)
+  doc.roundedRect(metaBoxX, metaBoxY, metaBoxW, metaBoxH, 2, 2, 'F')
+  doc.setDrawColor(210, 222, 215)
+  doc.roundedRect(metaBoxX, metaBoxY, metaBoxW, metaBoxH, 2, 2, 'S')
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(7)
+  doc.setTextColor(120, 130, 125)
+  doc.text('NOMOR KWITANSI', metaBoxX + 4, metaBoxY + 5)
+
+  doc.setFont('courier', 'bold')
+  doc.setFontSize(10.5)
+  doc.setTextColor(31, 93, 66)
+  doc.text(`KW-${booking.id}`, metaBoxX + 4, metaBoxY + 10.5)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7)
+  doc.setTextColor(90, 100, 95)
+  const formattedDate = new Date(booking.createdAt).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+  doc.text(`Tgl: ${formattedDate}`, metaBoxX + 4, metaBoxY + 14.5)
+
+  // Status Banner (Green)
+  const bannerY = margin + 51
+  doc.setFillColor(236, 253, 245)
+  doc.roundedRect(margin + 8, bannerY, contentWidth - 16, 13, 2, 2, 'F')
+  doc.setDrawColor(167, 243, 208)
+  doc.roundedRect(margin + 8, bannerY, contentWidth - 16, 13, 2, 2, 'S')
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.setTextColor(6, 95, 70)
+  doc.text(`STATUS: ${booking.paymentStatus.toUpperCase()} (TERVERIFIKASI SISTEM)`, margin + 12, bannerY + 5.5)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7.5)
+  doc.setTextColor(4, 120, 87)
+  doc.text(
+    `Metode: ${booking.paymentMethod || 'Transfer / QRIS'} • Pembayaran telah sah diterima dan teralokasi.`,
+    margin + 12,
+    bannerY + 9.8
+  )
+
+  // Details Table
+  let currentY = bannerY + 18
+  const rowHeight = 15
+
+  const drawRow = (label: string, value: string, subValue?: string, highlight?: boolean) => {
+    doc.setDrawColor(235, 238, 235)
+    doc.line(margin + 8, currentY, margin + contentWidth - 8, currentY)
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8)
+    doc.setTextColor(115, 125, 120)
+    doc.text(label.toUpperCase(), margin + 10, currentY + 6.5)
+
+    if (highlight) {
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(13)
+      doc.setTextColor(31, 93, 66)
+      doc.text(value, margin + 58, currentY + 7)
+    } else {
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(9)
+      doc.setTextColor(23, 35, 29)
+      doc.text(value, margin + 58, currentY + 6.5)
+    }
+
+    if (subValue) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7.5)
+      doc.setTextColor(90, 100, 95)
+      doc.text(subValue, margin + 58, currentY + 11.5)
+    }
+
+    currentY += rowHeight
+  }
+
+  // Row 1: Telah Diterima Dari
+  drawRow('Telah Diterima Dari', booking.fullName, `${booking.whatsapp} • ${booking.email || '-'}`)
+
+  // Row 2: Uang Sejumlah
+  const terbilang = angkaKeTerbilang(booking.totalPrice)
+  drawRow('Uang Sejumlah', formatRupiah(booking.totalPrice), `"${terbilang}"`, true)
+
+  // Row 3: Untuk Pembayaran
+  drawRow('Untuk Pembayaran', booking.packageOrTour, `Jumlah Peserta: ${booking.travelers} Orang`)
+
+  // Row 4: Jadwal & Titik Kumpul
+  const tripDate = booking.travelDate || booking.arrivalDate || 'Sesuai Konfirmasi'
+  const meetingInfo = `${booking.meetingTime || '08:00 WIB'} @ ${booking.meetingPoint || 'Stasiun Garut'}`
+  drawRow('Jadwal & Meeting Point', `Tanggal Trip: ${tripDate}`, `Waktu & Titik: ${meetingInfo}`)
+
+  // Row 5: Catatan Khusus (if any)
+  if (booking.notes) {
+    drawRow('Catatan Khusus', booking.notes.slice(0, 90))
+  }
+
+  // Bottom line of table
+  doc.setDrawColor(210, 220, 215)
+  doc.line(margin + 8, currentY, margin + contentWidth - 8, currentY)
+
+  // Footer Section
+  const footerY = 224
+
+  // Left: QR & Security Stamp
+  doc.setFillColor(248, 250, 248)
+  doc.roundedRect(margin + 8, footerY, 52, 38, 2, 2, 'F')
+  doc.setDrawColor(220, 228, 222)
+  doc.roundedRect(margin + 8, footerY, 52, 38, 2, 2, 'S')
+
+  doc.setFillColor(31, 93, 66)
+  doc.rect(margin + 12, footerY + 5, 12, 12, 'F')
+  doc.setFillColor(255, 255, 255)
+  doc.rect(margin + 14.5, footerY + 7.5, 7, 7, 'F')
+  doc.setFillColor(31, 93, 66)
+  doc.rect(margin + 16, footerY + 9, 4, 4, 'F')
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(7.5)
+  doc.setTextColor(31, 93, 66)
+  doc.text('VALIDASI QR', margin + 27, footerY + 9)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(6.5)
+  doc.setTextColor(90, 100, 95)
+  doc.text('Dokumen Resmi & Sah', margin + 27, footerY + 13.5)
+
+  doc.setFont('courier', 'normal')
+  doc.setFontSize(6)
+  doc.setTextColor(100, 110, 105)
+  doc.text(`ID: ${booking.id}`, margin + 12, footerY + 23)
+  doc.text('STATUS: VERIFIED', margin + 12, footerY + 27)
+  doc.text('GARUT JOURNEY CLOUD', margin + 12, footerY + 31)
+
+  // Center: Legal notice
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(6.8)
+  doc.setTextColor(120, 130, 125)
+  doc.text(
+    'Kwitansi ini diterbitkan secara sah dan otomatis oleh sistem reservasi',
+    margin + 64,
+    footerY + 11
+  )
+  doc.text(
+    'Garut Journey. Tidak memerlukan tanda tangan basah tambahan.',
+    margin + 64,
+    footerY + 15.5
+  )
+  doc.text(
+    `Tautan Unduh Resmi: garutjourney.com/kwitansi/${booking.id}`,
+    margin + 64,
+    footerY + 24
+  )
+
+  // Right: Signature
+  const sigX = 135
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7)
+  doc.setTextColor(90, 100, 95)
+  doc.text(`Garut, ${formattedDate}`, sigX, footerY + 6)
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(7.5)
+  doc.setTextColor(31, 93, 66)
+  doc.text(profile.legalName, sigX, footerY + 10.5)
+
+  // Stamp badge
+  doc.setFillColor(236, 253, 245)
+  doc.roundedRect(sigX, footerY + 13, 47, 11, 1.5, 1.5, 'F')
+  doc.setDrawColor(5, 150, 105)
+  doc.roundedRect(sigX, footerY + 13, 47, 11, 1.5, 1.5, 'S')
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(6.5)
+  doc.setTextColor(6, 95, 70)
+  doc.text('VERIFIED DIGITAL SIGNATURE', sigX + 3, footerY + 17.5)
+  doc.setFont('courier', 'normal')
+  doc.setFontSize(5.5)
+  doc.setTextColor(4, 120, 87)
+  doc.text(`REF: ${booking.id}-SEC-VAL`, sigX + 3, footerY + 21.5)
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(7.5)
+  doc.setTextColor(23, 35, 29)
+  doc.text('Bagian Keuangan & Kasir', sigX, footerY + 30)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(6.5)
+  doc.setTextColor(110, 120, 115)
+  doc.text('Finance Directorate Garut Journey', sigX, footerY + 34)
+
+  return doc
+}
+
   const p = COMPANY_PROFILE
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadPdf = () => {
     if (typeof window === 'undefined' || !booking) return
     setDownloadingPdf(true)
     try {
-      const element = document.getElementById('kwitansi-print-area')
-      if (!element) throw new Error('Elemen kwitansi tidak ditemukan')
+      const pdf = generateVectorKwitansiPdf(booking, p)
+      const fileName = `Kwitansi-${booking.id}.pdf`
 
-      // Capture at 2x scale for sharp, high-res text
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-      })
-
-      const imgData = canvas.toDataURL('image/png')
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      })
-
-      const pageWidth = pdf.internal.pageSize.getWidth() // 210mm
-      const pageHeight = pdf.internal.pageSize.getHeight() // 297mm
-      const margin = 10
-      const maxContentWidth = pageWidth - margin * 2
-      const maxContentHeight = pageHeight - margin * 2
-
-      const imgWidth = maxContentWidth
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
-
-      if (imgHeight <= maxContentHeight) {
-        pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight, undefined, 'FAST')
-      } else {
-        const scale = maxContentHeight / imgHeight
-        const fitWidth = imgWidth * scale
-        const fitHeight = imgHeight * scale
-        const xOffset = margin + (maxContentWidth - fitWidth) / 2
-        pdf.addImage(imgData, 'PNG', xOffset, margin, fitWidth, fitHeight, undefined, 'FAST')
-      }
-
-      pdf.save(`Kwitansi-${booking.id}.pdf`)
+      // Direct file download using browser Blob URL
+      const blob = pdf.output('blob')
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(url), 3000)
     } catch (err) {
       console.error('Error generating PDF:', err)
-      // Fallback to print if canvas generation fails
       window.print()
     } finally {
       setDownloadingPdf(false)
