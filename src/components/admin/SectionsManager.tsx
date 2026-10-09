@@ -186,14 +186,15 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
     try {
       const dataUrl = await readAndCompressImage(file)
       setGalImage(dataUrl)
+      setGalImageMode('upload')
       setGalUploadedName(file.name)
       if (!galTitle.trim()) {
         const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ')
         setGalTitle(cleanName.charAt(0).toUpperCase() + cleanName.slice(1))
       }
-      onNotify(`Foto "${file.name}" siap ditambahkan ke Galeri!`)
+      onNotify(`Foto "${file.name}" berhasil diunggah dan siap ditambahkan ke Galeri!`)
     } catch {
-      onNotify('Gagal membaca file gambar.')
+      onNotify('Gagal membaca file gambar. Pastikan format file adalah JPG, PNG, atau WebP.')
     } finally {
       setGalUploading(false)
     }
@@ -450,31 +451,54 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
                 {/* Input berdasarkan Mode */}
                 {galImageMode === 'upload' && (
                   <div className="rounded-2xl border-2 border-dashed border-forest/30 bg-forest/[0.03] p-5 text-center space-y-3">
-                    <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-forest/10 text-forest">
-                      <Upload className="h-6 w-6" />
-                    </div>
+                    {galImage.startsWith('data:') ? (
+                      <div className="space-y-3">
+                        <div className="relative mx-auto max-h-48 max-w-xs overflow-hidden rounded-2xl border border-forest/20 shadow-sm bg-black/5">
+                          <img
+                            src={galImage}
+                            alt="Preview Foto Terpilih"
+                            className="h-full max-h-44 w-full object-contain mx-auto"
+                          />
+                        </div>
+                        <div className="inline-flex items-center gap-1.5 rounded-full bg-forest/10 px-3 py-1 text-xs font-bold text-forest">
+                          <Check className="h-3.5 w-3.5" />
+                          <span>Foto berhasil diproses & siap disimpan</span>
+                        </div>
+                        <p className="text-xs text-ink/60">
+                          {galUploadedName || 'Foto dari perangkat'}
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-forest/10 text-forest">
+                          <Upload className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-ink">
+                            {galUploading
+                              ? 'Memproses & mengoptimalkan gambar...'
+                              : galUploadedName
+                              ? `File terpilih: ${galUploadedName}`
+                              : 'Pilih file foto dari perangkat Anda'}
+                          </p>
+                          <p className="text-xs text-ink/55 mt-0.5">
+                            Mendukung JPG, PNG, WebP (Otomatis dikompresi & dioptimalkan)
+                          </p>
+                        </div>
+                      </>
+                    )}
                     <div>
-                      <p className="text-sm font-bold text-ink">
-                        {galUploading
-                          ? 'Memproses & mengoptimalkan gambar...'
-                          : galUploadedName
-                          ? `File terpilih: ${galUploadedName}`
-                          : 'Pilih file foto dari perangkat Anda'}
-                      </p>
-                      <p className="text-xs text-ink/55 mt-0.5">
-                        Mendukung format JPG, PNG, WebP (Otomatis dikompresi agar cepat dimuat)
-                      </p>
+                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-ember px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow hover:bg-ember-600 transition">
+                        <Upload className="h-3.5 w-3.5" />
+                        <span>{galImage.startsWith('data:') ? 'Ganti Foto Lain' : 'Pilih File Gambar'}</span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/jpg,image/gif,image/*"
+                          onChange={handleGalleryFileUpload}
+                          className="hidden"
+                        />
+                      </label>
                     </div>
-                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-ember px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow hover:bg-ember-600 transition">
-                      <Upload className="h-3.5 w-3.5" />
-                      <span>Pilih File Gambar</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleGalleryFileUpload}
-                        className="hidden"
-                      />
-                    </label>
                   </div>
                 )}
 
@@ -725,10 +749,15 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
                 </label>
                 <div className="mt-1.5 flex gap-2">
                   <select
-                    value={dishImage.startsWith('data:') ? 'basoaci.png' : dishImage}
-                    onChange={(e) => setDishImage(e.target.value)}
+                    value={dishImage.startsWith('data:') ? 'custom' : dishImage}
+                    onChange={(e) => {
+                      if (e.target.value !== 'custom') setDishImage(e.target.value)
+                    }}
                     className="flex-1 rounded-xl border border-ink/20 px-3 py-2.5 text-sm text-ink"
                   >
+                    {dishImage.startsWith('data:') && (
+                      <option value="custom">Foto Hasil Upload Sendiri</option>
+                    )}
                     {AVAILABLE_IMAGES.map((img) => (
                       <option key={img.file} value={img.file}>
                         {img.label} ({img.file})
@@ -738,9 +767,22 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
                   <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-ember px-3.5 py-2.5 text-xs font-bold text-white hover:bg-ember-600 shrink-0">
                     <Upload className="h-3.5 w-3.5" />
                     <span>{dishUploading ? '...' : 'Upload'}</span>
-                    <input type="file" accept="image/*" onChange={handleDishFileUpload} className="hidden" />
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/jpg,image/gif,image/*"
+                      onChange={handleDishFileUpload}
+                      className="hidden"
+                    />
                   </label>
                 </div>
+                {dishImage.startsWith('data:') && (
+                  <div className="mt-2 flex items-center gap-2 bg-cream/40 p-2 rounded-xl border border-ink/10">
+                    <div className="h-10 w-10 rounded-lg overflow-hidden bg-forest/10 shrink-0">
+                      <img src={dishImage} alt="Preview Kuliner" className="h-full w-full object-cover" />
+                    </div>
+                    <span className="text-[0.7rem] text-forest font-semibold">Foto kuliner khusus siap digunakan</span>
+                  </div>
+                )}
               </div>
 
               <div className="sm:col-span-2">

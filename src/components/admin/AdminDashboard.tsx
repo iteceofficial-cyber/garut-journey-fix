@@ -2676,7 +2676,7 @@ Tim Garut Journey`
                         <span>{destUploading ? '...' : 'Upload'}</span>
                         <input
                           type="file"
-                          accept="image/*"
+                          accept="image/jpeg,image/png,image/webp,image/jpg,image/gif,image/*"
                           onChange={handleDestFileUpload}
                           className="hidden"
                         />
@@ -3393,7 +3393,7 @@ Tim Garut Journey`
                           <span>{logoUploading ? '...' : 'Upload Logo'}</span>
                           <input
                             type="file"
-                            accept="image/*"
+                            accept="image/jpeg,image/png,image/webp,image/jpg,image/svg+xml,image/*"
                             onChange={handleLogoFileUpload}
                             className="hidden"
                           />

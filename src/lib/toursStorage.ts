@@ -33,10 +33,20 @@ export function getStoredCityTours(): CityTour[] {
     const parsed = JSON.parse(raw) as CityTour[]
     if (!Array.isArray(parsed) || parsed.length === 0) return defaultCityTours
 
-    const map = new Map<string, CityTour>()
-    defaultCityTours.forEach((t) => map.set(t.id, t))
-    parsed.forEach((t) => map.set(t.id, t))
-    return Array.from(map.values())
+    const defaultIds = new Set(defaultCityTours.map((t) => t.id))
+    const customItems: CityTour[] = []
+    const updatedDefaultsMap = new Map<string, CityTour>()
+
+    parsed.forEach((item) => {
+      if (defaultIds.has(item.id)) {
+        updatedDefaultsMap.set(item.id, item)
+      } else {
+        customItems.push(item)
+      }
+    })
+
+    const finalDefaults = defaultCityTours.map((t) => updatedDefaultsMap.get(t.id) || t)
+    return [...customItems, ...finalDefaults]
   } catch {
     return defaultCityTours
   }
@@ -56,10 +66,8 @@ export async function upsertCityTour(tour: CityTour): Promise<CityTour[]> {
     persistMedia(`tour-${cleanId}`, normalized.image)
   }
 
-  const idx = current.findIndex((t) => t.id === cleanId)
-  const next = idx >= 0
-    ? current.map((t, i) => (i === idx ? normalized : t))
-    : [normalized, ...current]
+  const filtered = current.filter((t) => t.id !== cleanId && t.name !== normalized.name)
+  const next = [normalized, ...filtered]
 
   saveLocalCityTours(next)
 
@@ -105,19 +113,33 @@ export function useCityTours(): CityTour[] {
     const unsub = onSnapshot(
       collection(db, 'cityTours'),
       (snapshot) => {
-        if (!snapshot.empty) {
-          const map = new Map<string, CityTour>()
-          defaultCityTours.forEach((t) => map.set(t.id, t))
-          snapshot.forEach((snap) => {
-            const data = snap.data() as CityTour
-            if (data && data.id) {
-              map.set(data.id, data)
+        const defaultIds = new Set(defaultCityTours.map((t) => t.id))
+        const local = getStoredCityTours()
+        const localCustoms = local.filter((t) => !defaultIds.has(t.id))
+
+        const remoteMap = new Map<string, CityTour>()
+        snapshot.forEach((snap) => {
+          const data = snap.data() as CityTour
+          if (data && data.id) {
+            remoteMap.set(data.id, data)
+          }
+        })
+
+        const customMap = new Map<string, CityTour>()
+        localCustoms.forEach((c) => customMap.set(c.id, c))
+        remoteMap.forEach((r, key) => {
+          if (!defaultIds.has(key)) {
+            if (!customMap.has(key)) {
+              customMap.set(key, r)
             }
-          })
-          const merged = Array.from(map.values())
-          setList(merged)
-          saveLocalCityTours(merged)
-        }
+          }
+        })
+
+        const finalDefaults = defaultCityTours.map((t) => remoteMap.get(t.id) || t)
+        const merged = [...Array.from(customMap.values()), ...finalDefaults]
+
+        setList(merged)
+        saveLocalCityTours(merged)
       },
       (error) => {
         logFirestoreError(error, OperationType.GET, 'cityTours')
@@ -145,10 +167,20 @@ export function getStoredPackages(): TourPackage[] {
     const parsed = JSON.parse(raw) as TourPackage[]
     if (!Array.isArray(parsed) || parsed.length === 0) return defaultPackages
 
-    const map = new Map<string, TourPackage>()
-    defaultPackages.forEach((p) => map.set(p.id, p))
-    parsed.forEach((p) => map.set(p.id, p))
-    return Array.from(map.values())
+    const defaultIds = new Set(defaultPackages.map((p) => p.id))
+    const customItems: TourPackage[] = []
+    const updatedDefaultsMap = new Map<string, TourPackage>()
+
+    parsed.forEach((item) => {
+      if (defaultIds.has(item.id)) {
+        updatedDefaultsMap.set(item.id, item)
+      } else {
+        customItems.push(item)
+      }
+    })
+
+    const finalDefaults = defaultPackages.map((p) => updatedDefaultsMap.get(p.id) || p)
+    return [...customItems, ...finalDefaults]
   } catch {
     return defaultPackages
   }
@@ -164,10 +196,8 @@ export async function upsertTourPackage(pkg: TourPackage): Promise<TourPackage[]
   const cleanId = slugifyId(pkg.id || pkg.name, 'pkg')
   const normalized: TourPackage = { ...pkg, id: cleanId }
 
-  const idx = current.findIndex((p) => p.id === cleanId)
-  const next = idx >= 0
-    ? current.map((p, i) => (i === idx ? normalized : p))
-    : [normalized, ...current]
+  const filtered = current.filter((p) => p.id !== cleanId && p.name !== normalized.name)
+  const next = [normalized, ...filtered]
 
   saveLocalPackages(next)
 
@@ -213,19 +243,33 @@ export function useTourPackages(): TourPackage[] {
     const unsub = onSnapshot(
       collection(db, 'tourPackages'),
       (snapshot) => {
-        if (!snapshot.empty) {
-          const map = new Map<string, TourPackage>()
-          defaultPackages.forEach((p) => map.set(p.id, p))
-          snapshot.forEach((snap) => {
-            const data = snap.data() as TourPackage
-            if (data && data.id) {
-              map.set(data.id, data)
+        const defaultIds = new Set(defaultPackages.map((p) => p.id))
+        const local = getStoredPackages()
+        const localCustoms = local.filter((p) => !defaultIds.has(p.id))
+
+        const remoteMap = new Map<string, TourPackage>()
+        snapshot.forEach((snap) => {
+          const data = snap.data() as TourPackage
+          if (data && data.id) {
+            remoteMap.set(data.id, data)
+          }
+        })
+
+        const customMap = new Map<string, TourPackage>()
+        localCustoms.forEach((c) => customMap.set(c.id, c))
+        remoteMap.forEach((r, key) => {
+          if (!defaultIds.has(key)) {
+            if (!customMap.has(key)) {
+              customMap.set(key, r)
             }
-          })
-          const merged = Array.from(map.values())
-          setList(merged)
-          saveLocalPackages(merged)
-        }
+          }
+        })
+
+        const finalDefaults = defaultPackages.map((p) => remoteMap.get(p.id) || p)
+        const merged = [...Array.from(customMap.values()), ...finalDefaults]
+
+        setList(merged)
+        saveLocalPackages(merged)
       },
       (error) => {
         logFirestoreError(error, OperationType.GET, 'tourPackages')

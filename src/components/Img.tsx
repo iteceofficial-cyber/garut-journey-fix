@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { img, srcSet, DEFAULT_FALLBACK_IMAGE, SVG_FALLBACK_PLACEHOLDER } from '@/lib/img'
+import { getPersistedMedia } from '@/lib/mediaStorage'
 
 /** Lazy-loaded, error-resilient image with automated fallback to prevent broken UI */
 export function Img({
@@ -27,19 +28,33 @@ export function Img({
 
   useEffect(() => {
     errorCountRef.current = 0
-    setSrc(img(file, width))
+    const resolved = img(file, width)
+    setSrc(resolved)
+
+    // If file looks like an ID and resolved to /img/..., attempt async vault check
+    if (file && !file.startsWith('data:') && !file.startsWith('http') && !file.includes('.')) {
+      getPersistedMedia(file).then((vaultData) => {
+        if (vaultData) {
+          setSrc(vaultData)
+        }
+      })
+    }
   }, [file, width])
 
   const handleError = () => {
     if (errorCountRef.current === 0) {
       errorCountRef.current = 1
-      const fallbackSrc = fallback ? img(fallback, width) : DEFAULT_FALLBACK_IMAGE
-      // If the failing file is already the fallback, skip straight to SVG
-      if (src === fallbackSrc || file === fallbackSrc) {
-        errorCountRef.current = 2
-        setSrc(SVG_FALLBACK_PLACEHOLDER)
+      // Check if file is stored in IndexedDB media vault
+      if (file && !file.startsWith('data:') && !file.startsWith('http')) {
+        getPersistedMedia(file).then((vaultData) => {
+          if (vaultData) {
+            setSrc(vaultData)
+            return
+          }
+          applyFallback()
+        })
       } else {
-        setSrc(fallbackSrc)
+        applyFallback()
       }
     } else if (errorCountRef.current === 1) {
       errorCountRef.current = 2
@@ -47,7 +62,18 @@ export function Img({
     }
   }
 
-  const computedSrcSet = errorCountRef.current > 0 ? undefined : srcSet(file)
+  const applyFallback = () => {
+    const fallbackSrc = fallback ? img(fallback, width) : DEFAULT_FALLBACK_IMAGE
+    if (src === fallbackSrc || file === fallbackSrc) {
+      errorCountRef.current = 2
+      setSrc(SVG_FALLBACK_PLACEHOLDER)
+    } else {
+      setSrc(fallbackSrc)
+    }
+  }
+
+  const isDataUrl = typeof src === 'string' && src.startsWith('data:')
+  const computedSrcSet = errorCountRef.current > 0 || isDataUrl ? undefined : srcSet(file)
 
   return (
     <img
@@ -55,9 +81,9 @@ export function Img({
       srcSet={computedSrcSet}
       sizes={sizes}
       alt={alt}
-      loading={eager ? 'eager' : 'lazy'}
-      decoding="async"
-      fetchPriority={eager ? 'high' : undefined}
+      loading={eager || isDataUrl ? 'eager' : 'lazy'}
+      decoding={isDataUrl ? 'sync' : 'async'}
+      fetchPriority={eager || isDataUrl ? 'high' : undefined}
       onError={handleError}
       onClick={onClick}
       className={className}

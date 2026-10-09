@@ -1,3 +1,5 @@
+import { getMediaFromMemory } from '@/lib/mediaStorage'
+
 export const DEFAULT_FALLBACK_IMAGE = '/img/hero.png'
 
 /** Inline SVG placeholder in case no image can be loaded */
@@ -24,6 +26,13 @@ export function img(file?: string | null, _width = 1200) {
   ) {
     return trimmed
   }
+
+  // Check in-memory media cache for custom uploaded keys
+  const cachedMedia = getMediaFromMemory(trimmed)
+  if (cachedMedia) {
+    return cachedMedia
+  }
+
   const clean = trimmed.replace(/^\/+/, '').replace(/^img\/+/, '')
   return `/img/${clean}`
 }
@@ -31,7 +40,7 @@ export function img(file?: string | null, _width = 1200) {
 /**
  * A responsive srcSet for images.
  * Only generates distinct widths if the URL is an Unsplash image that supports `&w=`.
- * For local static images, returns undefined to avoid browser resolution-density distortion.
+ * For local static images and data URLs, returns undefined.
  */
 export function srcSet(file?: string | null, widths: number[] = [480, 800, 1200]): string | undefined {
   if (!file || file.startsWith('data:') || file.startsWith('blob:')) {
@@ -41,72 +50,132 @@ export function srcSet(file?: string | null, widths: number[] = [480, 800, 1200]
     const cleanUrl = file.split('?')[0]
     return widths.map((w) => `${cleanUrl}?auto=format&fit=crop&w=${w}&q=80 ${w}w`).join(', ')
   }
-  // Return undefined for static local images without CDN resizer to ensure crisp 1:1 rendering
   return undefined
 }
 
 /**
- * Compress and resize an uploaded image File into a lightweight base64 data URL
- * so it can be persisted safely in localStorage, IndexedDB, and Firestore.
- * Keeps output compact (~30KB-70KB) while preserving sharp retina display clarity.
+ * Compress and resize an uploaded image File into a lightweight, clean JPEG data URL (~30KB-65KB)
+ * Ultra-compatible across iPhone Safari, Android, and Desktop browsers.
+ * Safe for LocalStorage (5MB quota), Firestore (1MB limit), and IndexedDB.
  */
-export function readAndCompressImage(file: File, maxWidth = 960, quality = 0.74): Promise<string> {
+export function readAndCompressImage(file: File, maxWidth = 860, quality = 0.72): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onerror = () => reject(new Error('Gagal membaca file gambar.'))
-    reader.onload = () => {
-      const rawDataUrl = String(reader.result || '')
-      if (!rawDataUrl.startsWith('data:image')) {
-        resolve(rawDataUrl)
-        return
-      }
+    if (!file) {
+      reject(new Error('File tidak ditemukan.'))
+      return
+    }
 
-      const image = new Image()
-      image.onerror = () => resolve(rawDataUrl)
-      image.onload = () => {
+    // Try object URL first (fastest, lowest memory footprint for mobile)
+    let objectUrl = ''
+    try {
+      objectUrl = URL.createObjectURL(file)
+    } catch {
+      objectUrl = ''
+    }
+
+    const processImageSource = (src: string, isObjectUrl: boolean) => {
+      const img = new Image()
+
+      img.onload = () => {
+        if (isObjectUrl) {
+          try {
+            URL.revokeObjectURL(src)
+          } catch {
+            // ignore
+          }
+        }
+
         try {
-          const maxDim = maxWidth
-          let scale = 1
-          if (image.width > maxDim || image.height > maxDim) {
-            scale = Math.min(maxDim / image.width, maxDim / image.height)
+          let origWidth = img.naturalWidth || img.width || 800
+          let origHeight = img.naturalHeight || img.height || 600
+
+          let targetWidth = origWidth
+          let targetHeight = origHeight
+
+          if (origWidth > maxWidth || origHeight > maxWidth) {
+            const ratio = Math.min(maxWidth / origWidth, maxWidth / origHeight)
+            targetWidth = Math.max(1, Math.round(origWidth * ratio))
+            targetHeight = Math.max(1, Math.round(origHeight * ratio))
           }
 
           const canvas = document.createElement('canvas')
-          canvas.width = Math.max(1, Math.round(image.width * scale))
-          canvas.height = Math.max(1, Math.round(image.height * scale))
+          canvas.width = targetWidth
+          canvas.height = targetHeight
           const ctx = canvas.getContext('2d')
+
           if (!ctx) {
-            resolve(rawDataUrl)
+            resolve(src)
             return
           }
 
+          // Draw white background in case source has transparent regions
+          ctx.fillStyle = '#FFFFFF'
+          ctx.fillRect(0, 0, targetWidth, targetHeight)
+
           ctx.imageSmoothingEnabled = true
           ctx.imageSmoothingQuality = 'high'
-          ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
+          ctx.drawImage(img, 0, 0, targetWidth, targetHeight)
 
-          let compressed = canvas.toDataURL('image/jpeg', quality)
+          let outputDataUrl = canvas.toDataURL('image/jpeg', quality)
 
-          // If output is still larger than ~140KB, do a fast downscale pass to prevent localStorage quota issues
-          if (compressed.length > 140000) {
+          // If output exceeds 85KB, perform quick second-pass compression to stay quota-safe
+          if (outputDataUrl.length > 85000) {
             const canvas2 = document.createElement('canvas')
-            canvas2.width = Math.max(1, Math.round(canvas.width * 0.8))
-            canvas2.height = Math.max(1, Math.round(canvas.height * 0.8))
+            const scale2 = 0.8
+            canvas2.width = Math.max(1, Math.round(targetWidth * scale2))
+            canvas2.height = Math.max(1, Math.round(targetHeight * scale2))
             const ctx2 = canvas2.getContext('2d')
             if (ctx2) {
+              ctx2.fillStyle = '#FFFFFF'
+              ctx2.fillRect(0, 0, canvas2.width, canvas2.height)
               ctx2.imageSmoothingEnabled = true
               ctx2.imageSmoothingQuality = 'medium'
               ctx2.drawImage(canvas, 0, 0, canvas2.width, canvas2.height)
-              compressed = canvas2.toDataURL('image/jpeg', 0.68)
+              outputDataUrl = canvas2.toDataURL('image/jpeg', 0.65)
             }
           }
 
-          resolve(compressed)
+          resolve(outputDataUrl)
         } catch {
-          resolve(rawDataUrl)
+          resolve(src)
         }
       }
-      image.src = rawDataUrl
+
+      img.onerror = () => {
+        if (isObjectUrl) {
+          try {
+            URL.revokeObjectURL(src)
+          } catch {
+            // ignore
+          }
+          // Fallback to FileReader if objectURL failed
+          fallbackToFileReader()
+        } else {
+          resolve(src)
+        }
+      }
+
+      img.src = src
     }
-    reader.readAsDataURL(file)
+
+    const fallbackToFileReader = () => {
+      const reader = new FileReader()
+      reader.onerror = () => reject(new Error('Gagal membaca file gambar.'))
+      reader.onload = () => {
+        const result = String(reader.result || '')
+        if (result.startsWith('data:image')) {
+          processImageSource(result, false)
+        } else {
+          resolve(result)
+        }
+      }
+      reader.readAsDataURL(file)
+    }
+
+    if (objectUrl) {
+      processImageSource(objectUrl, true)
+    } else {
+      fallbackToFileReader()
+    }
   })
 }

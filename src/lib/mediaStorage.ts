@@ -61,6 +61,12 @@ export async function persistMedia(id: string, dataUrl: string): Promise<void> {
   }
 }
 
+/** Synchronous check of the in-memory media cache */
+export function getMediaFromMemory(id: string): string | null {
+  if (!id) return null
+  return memoryCache.get(id) || null
+}
+
 /** Retrieve a media data URL by id from memory cache or IndexedDB */
 export async function getPersistedMedia(id: string): Promise<string | null> {
   if (!id) return null

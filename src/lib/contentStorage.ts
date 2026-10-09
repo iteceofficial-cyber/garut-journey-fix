@@ -37,11 +37,22 @@ export function getStoredCulinary(): Dish[] {
     const parsed = JSON.parse(raw) as Dish[]
     if (!Array.isArray(parsed) || parsed.length === 0) return defaultDishes
 
-    // Merge parsed with default dishes to preserve all baseline items
-    const map = new Map<string, Dish>()
-    defaultDishes.forEach((d) => map.set(d.id, d))
-    parsed.forEach((d) => map.set(d.id, d))
-    return Array.from(map.values())
+    const defaultIds = new Set(defaultDishes.map((d) => d.id))
+    const customItems: Dish[] = []
+    const updatedDefaultsMap = new Map<string, Dish>()
+
+    parsed.forEach((item) => {
+      const key = item.id || item.name
+      if (defaultIds.has(key)) {
+        updatedDefaultsMap.set(key, item)
+      } else {
+        customItems.push(item)
+      }
+    })
+
+    const finalDefaults = defaultDishes.map((d) => updatedDefaultsMap.get(d.id) || d)
+    // Custom dishes are placed at the FRONT so newly uploaded culinary items appear first!
+    return [...customItems, ...finalDefaults]
   } catch {
     return defaultDishes
   }
@@ -61,10 +72,9 @@ export async function upsertCulinaryItem(item: Dish): Promise<Dish[]> {
     persistMedia(`dish-${cleanId}`, normalized.image)
   }
 
-  const idx = current.findIndex((c) => c.id === cleanId)
-  const next = idx >= 0
-    ? current.map((c, i) => (i === idx ? normalized : c))
-    : [normalized, ...current]
+  // Prepend so new items are immediately at the top
+  const filtered = current.filter((c) => c.id !== cleanId && c.name !== normalized.name)
+  const next = [normalized, ...filtered]
 
   saveLocalCulinary(next)
 
@@ -79,7 +89,7 @@ export async function upsertCulinaryItem(item: Dish): Promise<Dish[]> {
 
 export async function deleteCulinaryItem(id: string): Promise<Dish[]> {
   const current = getStoredCulinary()
-  const next = current.filter((c) => c.id !== id)
+  const next = current.filter((c) => c.id !== id && c.name !== id)
   saveLocalCulinary(next)
 
   try {
@@ -111,21 +121,34 @@ export function useCulinary(): Dish[] {
     const unsub = onSnapshot(
       collection(db, 'culinary'),
       (snapshot) => {
-        if (!snapshot.empty) {
-          const map = new Map<string, Dish>()
-          // 1. Seed defaults
-          defaultDishes.forEach((d) => map.set(d.id, d))
-          // 2. Overlay remote Firestore items
-          snapshot.forEach((snap) => {
-            const data = snap.data() as Dish
-            if (data && data.id) {
-              map.set(data.id, data)
+        const defaultIds = new Set(defaultDishes.map((d) => d.id))
+        const local = getStoredCulinary()
+        const localCustoms = local.filter((d) => !defaultIds.has(d.id))
+
+        const remoteMap = new Map<string, Dish>()
+        snapshot.forEach((snap) => {
+          const data = snap.data() as Dish
+          if (data && data.id) {
+            remoteMap.set(data.id, data)
+          }
+        })
+
+        // Merge: local customs first (preserves immediate uploads), then remote customs
+        const customMap = new Map<string, Dish>()
+        localCustoms.forEach((c) => customMap.set(c.id, c))
+        remoteMap.forEach((r, key) => {
+          if (!defaultIds.has(key)) {
+            if (!customMap.has(key)) {
+              customMap.set(key, r)
             }
-          })
-          const merged = Array.from(map.values())
-          setList(merged)
-          saveLocalCulinary(merged)
-        }
+          }
+        })
+
+        const finalDefaults = defaultDishes.map((d) => remoteMap.get(d.id) || d)
+        const merged = [...Array.from(customMap.values()), ...finalDefaults]
+
+        setList(merged)
+        saveLocalCulinary(merged)
       },
       (error) => {
         logFirestoreError(error, OperationType.GET, 'culinary')
@@ -162,14 +185,22 @@ export function getStoredGallery(): GalleryItem[] {
     const parsed = JSON.parse(raw) as GalleryItem[]
     if (!Array.isArray(parsed) || parsed.length === 0) return defaults
 
-    // Merge: Custom or updated items take precedence, baseline items are kept intact
-    const map = new Map<string, GalleryItem>()
-    defaults.forEach((g) => map.set(g.id || g.title, g))
-    parsed.forEach((g) => {
-      const key = g.id || g.title
-      map.set(key, g)
+    const defaultIds = new Set(defaults.map((d) => d.id))
+    const customItems: GalleryItem[] = []
+    const updatedDefaultsMap = new Map<string, GalleryItem>()
+
+    parsed.forEach((item) => {
+      const key = item.id || item.title
+      if (defaultIds.has(key)) {
+        updatedDefaultsMap.set(key, item)
+      } else {
+        customItems.push(item)
+      }
     })
-    return Array.from(map.values())
+
+    const finalDefaults = defaults.map((d) => updatedDefaultsMap.get(d.id!) || d)
+    // Custom/uploaded items appear FIRST at the beginning of the gallery
+    return [...customItems, ...finalDefaults]
   } catch {
     return defaults
   }
@@ -189,11 +220,9 @@ export async function upsertGalleryItem(item: GalleryItem): Promise<GalleryItem[
     persistMedia(`gallery-${cleanId}`, normalized.image)
   }
 
-  const idx = current.findIndex((g) => g.id === cleanId || g.title === item.title)
-  // Newly uploaded photos go straight to the front of the list so they appear immediately on the home page!
-  const next = idx >= 0
-    ? current.map((g, i) => (i === idx ? normalized : g))
-    : [normalized, ...current]
+  // Prepend to front so new photos are instantly visible at the very top of the gallery!
+  const filtered = current.filter((g) => g.id !== cleanId && g.title !== normalized.title)
+  const next = [normalized, ...filtered]
 
   saveLocalGallery(next)
 
@@ -241,23 +270,38 @@ export function useGallery(): GalleryItem[] {
     const unsub = onSnapshot(
       collection(db, 'gallery'),
       (snapshot) => {
-        if (!snapshot.empty) {
-          const map = new Map<string, GalleryItem>()
-          const defaults = withIds(defaultGallery)
-          // 1. Seed baseline gallery
-          defaults.forEach((g) => map.set(g.id || g.title, g))
-          // 2. Overlay Firestore documents (custom uploaded photos take priority)
-          snapshot.forEach((snap) => {
-            const data = snap.data() as GalleryItem
-            if (data) {
-              const key = data.id || data.title
-              map.set(key, data)
+        const defaults = withIds(defaultGallery)
+        const defaultIds = new Set(defaults.map((d) => d.id))
+
+        // Preserve local custom uploads so recent uploads are never lost
+        const local = getStoredGallery()
+        const localCustoms = local.filter((item) => !defaultIds.has(item.id))
+
+        const remoteMap = new Map<string, GalleryItem>()
+        snapshot.forEach((snap) => {
+          const data = snap.data() as GalleryItem
+          if (data) {
+            const key = data.id || data.title
+            remoteMap.set(key, data)
+          }
+        })
+
+        // Merge custom items: local first (most immediate), then remote
+        const customMap = new Map<string, GalleryItem>()
+        localCustoms.forEach((c) => customMap.set(c.id || c.title, c))
+        remoteMap.forEach((r, key) => {
+          if (!defaultIds.has(key)) {
+            if (!customMap.has(key)) {
+              customMap.set(key, r)
             }
-          })
-          const merged = Array.from(map.values())
-          setList(merged)
-          saveLocalGallery(merged)
-        }
+          }
+        })
+
+        const finalDefaults = defaults.map((d) => remoteMap.get(d.id!) || d)
+        const merged = [...Array.from(customMap.values()), ...finalDefaults]
+
+        setList(merged)
+        saveLocalGallery(merged)
       },
       (error) => {
         logFirestoreError(error, OperationType.GET, 'gallery')
@@ -286,10 +330,20 @@ export function getStoredExperiences(): Experience[] {
     const parsed = JSON.parse(raw) as Experience[]
     if (!Array.isArray(parsed) || parsed.length === 0) return defaultExperiences
 
-    const map = new Map<string, Experience>()
-    defaultExperiences.forEach((e) => map.set(e.id, e))
-    parsed.forEach((e) => map.set(e.id, e))
-    return Array.from(map.values())
+    const defaultIds = new Set(defaultExperiences.map((e) => e.id))
+    const customItems: Experience[] = []
+    const updatedDefaultsMap = new Map<string, Experience>()
+
+    parsed.forEach((item) => {
+      if (defaultIds.has(item.id)) {
+        updatedDefaultsMap.set(item.id, item)
+      } else {
+        customItems.push(item)
+      }
+    })
+
+    const finalDefaults = defaultExperiences.map((e) => updatedDefaultsMap.get(e.id) || e)
+    return [...customItems, ...finalDefaults]
   } catch {
     return defaultExperiences
   }
@@ -305,11 +359,8 @@ export async function upsertExperienceItem(item: Experience): Promise<Experience
   const cleanId = slugifyId(item.id || item.label, 'exp')
   const normalized: Experience = { ...item, id: cleanId }
 
-  const idx = current.findIndex((e) => e.id === cleanId)
-  const next = idx >= 0
-    ? current.map((e, i) => (i === idx ? normalized : e))
-    : [...current, normalized]
-
+  const filtered = current.filter((e) => e.id !== cleanId && e.label !== normalized.label)
+  const next = [normalized, ...filtered]
   saveLocalExperiences(next)
 
   try {
@@ -317,12 +368,13 @@ export async function upsertExperienceItem(item: Experience): Promise<Experience
   } catch (err) {
     logFirestoreError(err, OperationType.WRITE, `experiences/${cleanId}`)
   }
+
   return next
 }
 
 export async function deleteExperienceItem(id: string): Promise<Experience[]> {
   const current = getStoredExperiences()
-  const next = current.filter((e) => e.id !== id)
+  const next = current.filter((e) => e.id !== id && e.label !== id)
   saveLocalExperiences(next)
 
   try {
@@ -354,19 +406,33 @@ export function useExperiences(): Experience[] {
     const unsub = onSnapshot(
       collection(db, 'experiences'),
       (snapshot) => {
-        if (!snapshot.empty) {
-          const map = new Map<string, Experience>()
-          defaultExperiences.forEach((e) => map.set(e.id, e))
-          snapshot.forEach((snap) => {
-            const data = snap.data() as Experience
-            if (data && data.id) {
-              map.set(data.id, data)
+        const defaultIds = new Set(defaultExperiences.map((e) => e.id))
+        const local = getStoredExperiences()
+        const localCustoms = local.filter((e) => !defaultIds.has(e.id))
+
+        const remoteMap = new Map<string, Experience>()
+        snapshot.forEach((snap) => {
+          const data = snap.data() as Experience
+          if (data && data.id) {
+            remoteMap.set(data.id, data)
+          }
+        })
+
+        const customMap = new Map<string, Experience>()
+        localCustoms.forEach((c) => customMap.set(c.id, c))
+        remoteMap.forEach((r, key) => {
+          if (!defaultIds.has(key)) {
+            if (!customMap.has(key)) {
+              customMap.set(key, r)
             }
-          })
-          const merged = Array.from(map.values())
-          setList(merged)
-          saveLocalExperiences(merged)
-        }
+          }
+        })
+
+        const finalDefaults = defaultExperiences.map((e) => remoteMap.get(e.id) || e)
+        const merged = [...Array.from(customMap.values()), ...finalDefaults]
+
+        setList(merged)
+        saveLocalExperiences(merged)
       },
       (error) => {
         logFirestoreError(error, OperationType.GET, 'experiences')

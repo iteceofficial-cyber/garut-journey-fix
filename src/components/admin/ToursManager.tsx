@@ -432,10 +432,15 @@ export function ToursManager({ onNotify }: { onNotify: (msg: string) => void }) 
                   </label>
                   <div className="mt-1.5 flex gap-2">
                     <select
-                      value={ctImage.startsWith('data:') ? 'hiking.png' : ctImage}
-                      onChange={(e) => setCtImage(e.target.value)}
+                      value={ctImage.startsWith('data:') ? 'custom' : ctImage}
+                      onChange={(e) => {
+                        if (e.target.value !== 'custom') setCtImage(e.target.value)
+                      }}
                       className="flex-1 rounded-xl border border-ink/20 px-3 py-2.5 text-sm text-ink focus:border-forest focus:outline-none"
                     >
+                      {ctImage.startsWith('data:') && (
+                        <option value="custom">Foto Hasil Upload Sendiri</option>
+                      )}
                       {AVAILABLE_IMAGES.map((img) => (
                         <option key={img.file} value={img.file}>
                           {img.label} ({img.file})
@@ -445,9 +450,22 @@ export function ToursManager({ onNotify }: { onNotify: (msg: string) => void }) 
                     <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-ember px-3.5 py-2.5 text-xs font-bold text-white hover:bg-ember-600 shrink-0">
                       <Upload className="h-3.5 w-3.5" />
                       <span>{ctUploading ? '...' : 'Upload'}</span>
-                      <input type="file" accept="image/*" onChange={handleCtFileUpload} className="hidden" />
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/jpg,image/gif,image/*"
+                        onChange={handleCtFileUpload}
+                        className="hidden"
+                      />
                     </label>
                   </div>
+                  {ctImage.startsWith('data:') && (
+                    <div className="mt-2 flex items-center gap-2 bg-cream/40 p-2 rounded-xl border border-ink/10">
+                      <div className="h-10 w-10 rounded-lg overflow-hidden bg-forest/10 shrink-0">
+                        <img src={ctImage} alt="Preview Tour" className="h-full w-full object-cover" />
+                      </div>
+                      <span className="text-[0.7rem] text-forest font-semibold">Foto sampul tour siap digunakan</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>

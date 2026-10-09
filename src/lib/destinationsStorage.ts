@@ -111,17 +111,22 @@ export function getStoredDestinations(): Destination[] {
   try {
     const raw = localStorage.getItem(DESTINATIONS_KEY)
     if (raw) {
-      const custom: Destination[] = JSON.parse(raw)
-      const base = [...defaultDestinations]
-      custom.forEach((c) => {
-        const idx = base.findIndex((b) => b.slug === c.slug)
-        if (idx >= 0) {
-          base[idx] = c
+      const parsed: Destination[] = JSON.parse(raw)
+      const defaultSlugs = new Set(defaultDestinations.map((d) => d.slug))
+      const customItems: Destination[] = []
+      const updatedDefaultsMap = new Map<string, Destination>()
+
+      parsed.forEach((item) => {
+        if (defaultSlugs.has(item.slug)) {
+          updatedDefaultsMap.set(item.slug, item)
         } else {
-          base.push(c)
+          customItems.push(item)
         }
       })
-      return base
+
+      const finalDefaults = defaultDestinations.map((d) => updatedDefaultsMap.get(d.slug) || d)
+      // Custom destinations placed first so they are immediately visible on the home page!
+      return [...customItems, ...finalDefaults]
     }
   } catch (err) {
     console.error('Failed to get custom destinations:', err)
@@ -188,25 +193,33 @@ export function useDestinations() {
     const unsub = onSnapshot(
       collection(db, 'destinations'),
       (snapshot) => {
-        if (!snapshot.empty) {
-          const remoteMap = new Map<string, Destination>()
-          snapshot.forEach((snap) => {
-            const data = snap.data() as Destination
-            remoteMap.set(data.slug, data)
-          })
+        const defaultSlugs = new Set(defaultDestinations.map((d) => d.slug))
+        const local = getStoredDestinations()
+        const localCustoms = local.filter((d) => !defaultSlugs.has(d.slug))
 
-          const merged = [...defaultDestinations]
-          remoteMap.forEach((dest, slug) => {
-            const idx = merged.findIndex((d) => d.slug === slug)
-            if (idx >= 0) {
-              merged[idx] = dest
-            } else {
-              merged.push(dest)
+        const remoteMap = new Map<string, Destination>()
+        snapshot.forEach((snap) => {
+          const data = snap.data() as Destination
+          if (data && data.slug) {
+            remoteMap.set(data.slug, data)
+          }
+        })
+
+        const customMap = new Map<string, Destination>()
+        localCustoms.forEach((c) => customMap.set(c.slug, c))
+        remoteMap.forEach((r, slug) => {
+          if (!defaultSlugs.has(slug)) {
+            if (!customMap.has(slug)) {
+              customMap.set(slug, r)
             }
-          })
-          setDestinationsList(merged)
-          saveLocalDestinations(Array.from(remoteMap.values()))
-        }
+          }
+        })
+
+        const finalDefaults = defaultDestinations.map((d) => remoteMap.get(d.slug) || d)
+        const merged = [...Array.from(customMap.values()), ...finalDefaults]
+
+        setDestinationsList(merged)
+        saveLocalDestinations(merged)
       },
       (error) => {
         logFirestoreError(error, OperationType.GET, 'destinations')

@@ -13,6 +13,7 @@ export function Gallery() {
   const [activeItem, setActiveItem] = useState<GalleryItem | null>(null)
   const { t } = useLanguage()
   const gallery = useGallery()
+  const visibleItems = filter === 'All' ? gallery : gallery.filter((g) => g.category === filter)
 
   return (
     <section id="gallery" className="bg-cream-200/60 py-24 sm:py-32">
@@ -33,12 +34,10 @@ export function Gallery() {
         </div>
 
         <ul className="mt-12 columns-2 gap-4 md:columns-3 lg:columns-4 [&>li]:mb-4">
-          {gallery.map((g, idx) => {
-            const shown = filter === 'All' || g.category === filter
+          {visibleItems.map((g, idx) => {
             return (
               <li
                 key={g.id || `gal-item-${idx}-${g.title}`}
-                hidden={!shown}
                 className="group relative break-inside-avoid overflow-hidden rounded-3xl shadow-soft cursor-pointer"
                 onClick={() => setActiveItem(g)}
               >
@@ -48,6 +47,7 @@ export function Gallery() {
                     alt={`${g.title} — ${g.description}`}
                     sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
                     width={800}
+                    eager={idx < 4}
                     className="h-full w-full object-cover transition duration-[1.2s] group-hover:scale-110"
                   />
                   <div className="absolute top-3 right-3 rounded-full bg-ink/60 p-2 text-white opacity-0 backdrop-blur-sm transition duration-300 group-hover:opacity-100">
