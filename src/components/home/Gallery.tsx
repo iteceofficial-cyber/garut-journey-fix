@@ -33,11 +33,11 @@ export function Gallery() {
         </div>
 
         <ul className="mt-12 columns-2 gap-4 md:columns-3 lg:columns-4 [&>li]:mb-4">
-          {gallery.map((g) => {
+          {gallery.map((g, idx) => {
             const shown = filter === 'All' || g.category === filter
             return (
               <li
-                key={g.image + g.title}
+                key={g.id || `gal-item-${idx}-${g.title}`}
                 hidden={!shown}
                 className="group relative break-inside-avoid overflow-hidden rounded-3xl shadow-soft cursor-pointer"
                 onClick={() => setActiveItem(g)}

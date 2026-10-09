@@ -46,6 +46,7 @@ function KwitansiDetailPage() {
   const [loading, setLoading] = useState(() => !booking)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [downloadSuccess, setDownloadSuccess] = useState(false)
+  const [blobUrl, setPdfBlobUrl] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [searchId, setSearchId] = useState('')
   const [allBookings, setAllBookings] = useState<Booking[]>(() => getStoredBookings())
@@ -384,27 +385,80 @@ function generateVectorKwitansiPdf(booking: Booking, profile: typeof COMPANY_PRO
 
   const p = COMPANY_PROFILE
 
-  const handleDownloadPdf = () => {
+  const isIOS =
+    typeof navigator !== 'undefined' &&
+    (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
+
+  // Pre-generate PDF Blob URL for instant access and iPhone Safari compatibility
+  useEffect(() => {
+    if (!booking || typeof window === 'undefined') return
+    try {
+      const pdf = generateVectorKwitansiPdf(booking, p)
+      const blob = new Blob([pdf.output('blob')], { type: 'application/pdf' })
+      const url = URL.createObjectURL(blob)
+      setPdfBlobUrl(url)
+      return () => {
+        URL.revokeObjectURL(url)
+      }
+    } catch (e) {
+      console.warn('Pre-generating PDF blob error:', e)
+    }
+  }, [booking?.id])
+
+  const handleDownloadPdf = async (e?: React.MouseEvent) => {
     if (typeof window === 'undefined' || !booking) return
     setDownloadingPdf(true)
     try {
       const pdf = generateVectorKwitansiPdf(booking, p)
       const fileName = `Kwitansi-${booking.id}.pdf`
+      const pdfBlob = new Blob([pdf.output('blob')], { type: 'application/pdf' })
 
-      // 1. Primary: native jsPDF save method
+      // 1. iPhone / iOS: Use native Web Share API (Save to Files)
+      if (isIOS && typeof navigator !== 'undefined' && navigator.share) {
+        try {
+          const file = new File([pdfBlob], fileName, { type: 'application/pdf' })
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            if (e) e.preventDefault()
+            await navigator.share({
+              files: [file],
+              title: `Kwitansi Pembayaran #${booking.id}`,
+              text: `Kwitansi Resmi Garut Journey #${booking.id} - ${booking.fullName}`,
+            })
+            setDownloadSuccess(true)
+            setTimeout(() => setDownloadSuccess(false), 5000)
+            return
+          }
+        } catch (shareErr) {
+          if (shareErr instanceof Error && shareErr.name === 'AbortError') {
+            return
+          }
+        }
+      }
+
+      // 2. iPhone Fallback (WKWebView or if Share API is not available):
+      // Open the Blob URL directly so Safari/WKWebView loads native PDF reader
+      if (isIOS) {
+        const fileUrl = blobUrl || URL.createObjectURL(pdfBlob)
+        if (!e) {
+          window.location.assign(fileUrl)
+        }
+        setDownloadSuccess(true)
+        setTimeout(() => setDownloadSuccess(false), 5000)
+        return
+      }
+
+      // 3. Android, Windows, Mac Chrome: Standard download
       try {
         pdf.save(fileName)
       } catch (_saveErr) {
-        // 2. Secondary fallback: Blob URL
-        const blob = pdf.output('blob')
-        const url = URL.createObjectURL(blob)
+        const url = blobUrl || URL.createObjectURL(pdfBlob)
         const a = document.createElement('a')
         a.href = url
         a.download = fileName
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
-        setTimeout(() => URL.revokeObjectURL(url), 5000)
       }
 
       setDownloadSuccess(true)
@@ -428,12 +482,14 @@ function generateVectorKwitansiPdf(booking: Booking, profile: typeof COMPANY_PRO
       params.get('action') === 'download'
 
     if (shouldDownload && !downloadingPdf) {
-      const timer = setTimeout(() => {
-        handleDownloadPdf()
-      }, 700)
-      return () => clearTimeout(timer)
+      if (!isIOS) {
+        const timer = setTimeout(() => {
+          handleDownloadPdf()
+        }, 700)
+        return () => clearTimeout(timer)
+      }
     }
-  }, [booking?.id])
+  }, [booking?.id, isIOS])
 
   const handlePrint = () => {
     if (typeof window !== 'undefined') {
@@ -592,12 +648,14 @@ function generateVectorKwitansiPdf(booking: Booking, profile: typeof COMPANY_PRO
         </Link>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Download Real PDF Button */}
-          <button
-            type="button"
-            disabled={downloadingPdf}
+          {/* Download Real PDF Button (Optimized for iPhone, Android, and Desktop) */}
+          <a
+            href={blobUrl || '#'}
+            download={`Kwitansi-${booking.id}.pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
             onClick={handleDownloadPdf}
-            className="inline-flex items-center gap-2 rounded-full bg-forest px-4 py-2 text-xs font-bold text-white shadow-soft hover:bg-forest-700 transition disabled:opacity-60 cursor-pointer active:scale-95"
+            className="inline-flex items-center gap-2 rounded-full bg-forest px-4 py-2 text-xs font-bold text-white shadow-soft hover:bg-forest-700 transition cursor-pointer active:scale-95"
             title="Unduh kwitansi resmi sebagai file PDF langsung ke perangkat"
           >
             {downloadingPdf ? (
@@ -611,7 +669,7 @@ function generateVectorKwitansiPdf(booking: Booking, profile: typeof COMPANY_PRO
                 <span>Download PDF</span>
               </>
             )}
-          </button>
+          </a>
 
           <button
             type="button"
@@ -647,12 +705,39 @@ function generateVectorKwitansiPdf(booking: Booking, profile: typeof COMPANY_PRO
         </div>
       </div>
 
+      {/* iPhone Helper Card */}
+      {isIOS && (
+        <div className="relative z-30 mx-auto max-w-3xl mb-4 rounded-2xl bg-gradient-to-r from-emerald-900 to-forest p-3.5 sm:p-4 text-white shadow-lift flex items-center justify-between gap-3 border border-emerald-400/30 print:hidden animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-white/15 text-lg shrink-0">
+              📱
+            </div>
+            <div>
+              <p className="font-bold text-xs sm:text-sm">Pengguna iPhone (iOS / Safari / WA):</p>
+              <p className="text-[0.7rem] sm:text-xs text-cream/80 mt-0.5">
+                Ketuk tombol unduh untuk membuka file PDF. Di iPhone, Anda dapat langsung memilih <strong>&ldquo;Simpan ke File&rdquo;</strong> (Save to Files).
+              </p>
+            </div>
+          </div>
+          <a
+            href={blobUrl || '#'}
+            download={`Kwitansi-${booking.id}.pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={handleDownloadPdf}
+            className="shrink-0 rounded-xl bg-ember px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-ember-600 active:scale-95 transition"
+          >
+            Simpan PDF
+          </a>
+        </div>
+      )}
+
       {/* Download Alert Toast when file is saved */}
       {downloadSuccess && (
         <div className="relative z-30 mx-auto max-w-3xl mb-4 rounded-2xl bg-emerald-700 text-white p-3.5 text-xs font-semibold shadow-lift flex items-center justify-between gap-3 animate-fade-in print:hidden">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-emerald-200 shrink-0" />
-            <span>Kwitansi resmi (PDF) berhasil diunduh ke perangkat Anda!</span>
+            <span>Kwitansi resmi (PDF) berhasil diproses / diunduh ke perangkat Anda!</span>
           </div>
           <button
             type="button"
@@ -678,21 +763,23 @@ function generateVectorKwitansiPdf(booking: Booking, profile: typeof COMPANY_PRO
               </span>
             </div>
             <p className="text-xs text-white/80 mt-0.5">
-              Halo, <strong className="text-white">{booking.fullName}</strong>! Klik tombol unduh untuk menyimpan file PDF kwitansi resmi ke galeri/dokumen ponsel Anda.
+              Halo, <strong className="text-white">{booking.fullName}</strong>! Unduh kwitansi resmi PDF Anda ke memori / dokumen ponsel atau komputer Anda.
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          disabled={downloadingPdf}
+        <a
+          href={blobUrl || '#'}
+          download={`Kwitansi-${booking.id}.pdf`}
+          target="_blank"
+          rel="noopener noreferrer"
           onClick={handleDownloadPdf}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-ember px-5 py-3 text-xs sm:text-sm font-bold text-white shadow-lift hover:bg-ember-600 transition disabled:opacity-60 cursor-pointer shrink-0 w-full sm:w-auto active:scale-95"
+          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-ember px-5 py-3 text-xs sm:text-sm font-bold text-white shadow-lift hover:bg-ember-600 transition cursor-pointer shrink-0 w-full sm:w-auto active:scale-95 text-center"
         >
           {downloadingPdf ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Mengunduh PDF...</span>
+              <span>Memproses PDF...</span>
             </>
           ) : (
             <>
@@ -700,7 +787,7 @@ function generateVectorKwitansiPdf(booking: Booking, profile: typeof COMPANY_PRO
               <span>Download PDF Sekarang</span>
             </>
           )}
-        </button>
+        </a>
       </div>
 
       {/* Main Kwitansi Document (No bulky header, clean receipt document) */}

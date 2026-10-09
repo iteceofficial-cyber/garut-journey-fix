@@ -15,6 +15,7 @@ import { TeamGuides } from '@/components/home/TeamGuides'
 import { Testimonials } from '@/components/home/Testimonials'
 import { TravelGuide } from '@/components/home/TravelGuide'
 import { WhyGarut } from '@/components/home/WhyGarut'
+import { ScrollToBottomFab } from '@/components/home/ScrollToBottomFab'
 
 export const Route = createFileRoute('/')({
   component: Home,
@@ -39,6 +40,7 @@ function Home() {
       <TravelGuide />
       <Booking />
       <Contact />
+      <ScrollToBottomFab />
     </>
   )
 }

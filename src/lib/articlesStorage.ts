@@ -6,8 +6,9 @@ import {
   deleteDoc,
   onSnapshot,
 } from 'firebase/firestore'
-import { db, handleFirestoreError, logFirestoreError, OperationType } from '@/lib/firebase'
+import { db, logFirestoreError, OperationType } from '@/lib/firebase'
 import { articles as defaultArticles, type Article } from '@/data/articles'
+import { safeLocalStorageSet, persistMedia } from '@/lib/mediaStorage'
 
 const STORAGE_KEY = 'garut_journey_articles_v2'
 const CHANGE_EVENT = 'garut_articles_updated'
@@ -22,9 +23,12 @@ export function getStoredArticles(): Article[] {
     if (!raw) {
       return defaultArticles
     }
-    const parsed = JSON.parse(raw)
+    const parsed = JSON.parse(raw) as Article[]
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed
+      const map = new Map<string, Article>()
+      defaultArticles.forEach((a) => map.set(a.slug, a))
+      parsed.forEach((a) => map.set(a.slug, a))
+      return Array.from(map.values())
     }
   } catch (err) {
     console.error('Failed to load articles from storage:', err)
@@ -34,12 +38,7 @@ export function getStoredArticles(): Article[] {
 
 export function saveLocalArticles(articles: Article[]) {
   if (typeof window === 'undefined') return
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(articles))
-    window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: articles }))
-  } catch (err) {
-    console.error('Failed to save articles to local storage:', err)
-  }
+  safeLocalStorageSet(STORAGE_KEY, articles, CHANGE_EVENT, articles)
 }
 
 /** Get single article by slug from storage or fallback */
@@ -51,22 +50,34 @@ export function getArticleFromStorage(slug: string): Article | undefined {
 /** Save or update article in Firestore and localStorage */
 export async function saveArticleToStorage(article: Article): Promise<boolean> {
   const current = getStoredArticles()
-  const index = current.findIndex((a) => a.slug === article.slug)
+  const cleanSlug = article.slug
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '') || `art-${Date.now()}`
+
+  const normalized: Article = { ...article, slug: cleanSlug }
+
+  if (normalized.image && normalized.image.startsWith('data:')) {
+    persistMedia(`art-${cleanSlug}`, normalized.image)
+  }
+
+  const index = current.findIndex((a) => a.slug === cleanSlug)
   let updated: Article[]
   if (index >= 0) {
     updated = [...current]
-    updated[index] = { ...article }
+    updated[index] = normalized
   } else {
-    updated = [{ ...article }, ...current]
+    updated = [normalized, ...current]
   }
   saveLocalArticles(updated)
 
   try {
-    await setDoc(doc(db, 'articles', article.slug), article)
+    await setDoc(doc(db, 'articles', cleanSlug), normalized)
     return true
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, `articles/${article.slug}`)
-    return false
+    logFirestoreError(err, OperationType.WRITE, `articles/${cleanSlug}`)
+    return true
   }
 }
 
@@ -80,7 +91,7 @@ export async function deleteArticleFromStorage(slug: string): Promise<boolean> {
     await deleteDoc(doc(db, 'articles', slug))
     return true
   } catch (err) {
-    handleFirestoreError(err, OperationType.DELETE, `articles/${slug}`)
+    logFirestoreError(err, OperationType.DELETE, `articles/${slug}`)
     return false
   }
 }
@@ -111,10 +122,17 @@ export function useArticles() {
       collection(db, 'articles'),
       (snapshot) => {
         if (!snapshot.empty) {
-          const remoteList: Article[] = []
-          snapshot.forEach((snap) => remoteList.push(snap.data() as Article))
-          setItems(remoteList)
-          saveLocalArticles(remoteList)
+          const map = new Map<string, Article>()
+          defaultArticles.forEach((a) => map.set(a.slug, a))
+          snapshot.forEach((snap) => {
+            const data = snap.data() as Article
+            if (data && data.slug) {
+              map.set(data.slug, data)
+            }
+          })
+          const merged = Array.from(map.values())
+          setItems(merged)
+          saveLocalArticles(merged)
         }
       },
       (error) => {

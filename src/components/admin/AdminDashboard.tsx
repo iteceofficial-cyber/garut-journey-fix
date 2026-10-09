@@ -46,6 +46,7 @@ import {
   Tag,
   Trash2,
   TrendingUp,
+  Upload,
   User,
   Users,
   Zap,
@@ -53,6 +54,7 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { exportBookingsToExcel, exportBookingsToCSV } from '@/lib/excelExport'
 import { Img } from '@/components/Img'
+import { readAndCompressImage } from '@/lib/img'
 import { ToursManager } from '@/components/admin/ToursManager'
 import { ReviewsManager } from '@/components/admin/ReviewsManager'
 import { SectionsManager } from '@/components/admin/SectionsManager'
@@ -295,6 +297,39 @@ export function AdminDashboard() {
   const [destOverview, setDestOverview] = useState('')
   const [destOpeningHours, setDestOpeningHours] = useState('08.00 - 17.00 WIB')
   const [destFacilities, setDestFacilities] = useState('Parkir Luas, Toilet, Mushola, Warung Makan')
+  const [destUploading, setDestUploading] = useState(false)
+  const [logoUploading, setLogoUploading] = useState(false)
+
+  const handleDestFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setDestUploading(true)
+    try {
+      const dataUrl = await readAndCompressImage(file)
+      setDestImage(dataUrl)
+      notifySuccess(`Foto "${file.name}" siap digunakan untuk destinasi!`)
+    } catch {
+      setErrorMsg('Gagal membaca file foto.')
+    } finally {
+      setDestUploading(false)
+    }
+  }
+
+  const handleLogoFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setLogoUploading(true)
+    try {
+      const dataUrl = await readAndCompressImage(file, 600, 0.85)
+      setCustomLogoUrl(dataUrl)
+      setLogoType('custom')
+      notifySuccess(`Logo "${file.name}" berhasil diunggah!`)
+    } catch {
+      setErrorMsg('Gagal membaca file logo.')
+    } finally {
+      setLogoUploading(false)
+    }
+  }
 
   useEffect(() => {
     const authSession = localStorage.getItem('garut_journey_admin_auth')
@@ -898,17 +933,13 @@ Tim kami siap menyambut kedatangan Anda di Garut! Ada hal yang ingin dipersiapka
     const phone = rawNumber.startsWith('0') ? '62' + rawNumber.slice(1) : rawNumber
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://garutjourney.com'
     const directDownloadUrl = `${origin}/kwitansi/${b.id}?download=true`
-    const onlineUrl = `${origin}/kwitansi/${b.id}`
     const text = `Halo Kak ${b.fullName}, terima kasih! Pembayaran Anda sebesar ${formatRupiah(b.totalPrice)} untuk paket "${b.packageOrTour}" telah kami konfirmasi LUNAS. ✅
 
 Berikut adalah tautan resmi untuk MENGUNDUH KWITANSI RESMI (PDF):
 📥 ${directDownloadUrl}
 
-Atau lihat kwitansi secara online:
-📄 ${onlineUrl}
-
 ℹ️ Catatan Penting:
-Kwitansi ini dapat langsung dibuka dan diunduh (PDF) melalui link di atas tanpa perlu login ke sistem. Simpan bukti ini untuk ditunjukkan kepada tour guide / driver kami saat penjemputan di meeting point (${b.meetingPoint || 'Garut'}).
+Kwitansi ini dapat langsung diunduh (PDF) melalui link di atas tanpa perlu login ke sistem (kompatibel untuk iPhone, Android, dan Komputer). Simpan bukti ini untuk ditunjukkan kepada tour guide / driver kami saat penjemputan di meeting point (${b.meetingPoint || 'Garut'}).
 
 Sampai jumpa di Garut!
 
@@ -2621,19 +2652,44 @@ Tim Garut Journey`
 
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
-                      Pilihan Gambar Destinasi
+                      Foto Gambar Destinasi
                     </label>
-                    <select
-                      value={destImage}
-                      onChange={(e) => setDestImage(e.target.value)}
-                      className="mt-1.5 w-full rounded-xl border border-ink/20 px-4 py-2.5 text-sm text-ink focus:border-forest focus:outline-none"
-                    >
-                      {AVAILABLE_IMAGES.map((img) => (
-                        <option key={img.file} value={img.file}>
-                          {img.label} ({img.file})
-                        </option>
-                      ))}
-                    </select>
+                    <div className="mt-1.5 flex gap-2">
+                      <select
+                        value={destImage.startsWith('data:') ? 'custom' : destImage}
+                        onChange={(e) => {
+                          if (e.target.value !== 'custom') setDestImage(e.target.value)
+                        }}
+                        className="flex-1 rounded-xl border border-ink/20 px-3 py-2.5 text-sm text-ink focus:border-forest focus:outline-none"
+                      >
+                        {destImage.startsWith('data:') && (
+                          <option value="custom">Foto Hasil Upload Sendiri</option>
+                        )}
+                        {AVAILABLE_IMAGES.map((img) => (
+                          <option key={img.file} value={img.file}>
+                            {img.label} ({img.file})
+                          </option>
+                        ))}
+                      </select>
+                      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-ember px-3.5 py-2.5 text-xs font-bold text-white hover:bg-ember-600 transition shrink-0">
+                        <Upload className="h-4 w-4" />
+                        <span>{destUploading ? '...' : 'Upload'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleDestFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    {destImage.startsWith('data:') && (
+                      <div className="mt-2 flex items-center gap-2 bg-cream/40 p-2 rounded-xl border border-ink/10">
+                        <div className="h-10 w-10 rounded-lg overflow-hidden bg-forest/10 shrink-0">
+                          <img src={destImage} alt="Preview" className="h-full w-full object-cover" />
+                        </div>
+                        <span className="text-[0.7rem] text-forest font-semibold">Foto khusus siap digunakan</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="sm:col-span-2">
@@ -3322,17 +3378,29 @@ Tim Garut Journey`
                   <div className="space-y-4 pt-2 border-t border-ink/10 animate-fade-in">
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
-                        Tautan URL Gambar Logo Kustom *
+                        Upload File Logo atau Masukkan URL *
                       </label>
-                      <input
-                        type="url"
-                        value={customLogoUrl}
-                        onChange={(e) => setCustomLogoUrl(e.target.value)}
-                        placeholder="https://example.com/logo-garut.png (format PNG/SVG)"
-                        className="mt-1.5 w-full rounded-xl border border-ink/15 bg-white px-4 py-2.5 text-xs text-ink font-mono focus:border-forest focus:outline-none"
-                      />
+                      <div className="mt-1.5 flex gap-2">
+                        <input
+                          type="text"
+                          value={customLogoUrl}
+                          onChange={(e) => setCustomLogoUrl(e.target.value)}
+                          placeholder="Pilih file logo atau ketik URL gambar..."
+                          className="flex-1 rounded-xl border border-ink/15 bg-white px-4 py-2.5 text-xs text-ink font-mono focus:border-forest focus:outline-none"
+                        />
+                        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-ember px-3.5 py-2.5 text-xs font-bold text-white hover:bg-ember-600 transition shrink-0">
+                          <Upload className="h-4 w-4" />
+                          <span>{logoUploading ? '...' : 'Upload Logo'}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoFileUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
                       <p className="mt-1 text-[0.65rem] text-ink/50">
-                        Masukkan tautan file logo yang dapat diakses publik (contoh: dari Imgur, Cloudinary, atau CDN).
+                        Mendukung upload langsung file PNG transparan, WebP, SVG, atau JPG dari komputer/smartphone Anda.
                       </p>
                     </div>
 

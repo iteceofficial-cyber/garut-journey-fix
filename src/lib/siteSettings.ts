@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { doc, setDoc, onSnapshot } from 'firebase/firestore'
-import { db, handleFirestoreError, logFirestoreError, OperationType } from '@/lib/firebase'
+import { db, logFirestoreError, OperationType } from '@/lib/firebase'
 import { site as defaultSite } from '@/data/site'
 import type { LanguageCode } from '@/lib/i18n'
+import { safeLocalStorageSet } from '@/lib/mediaStorage'
 
 const SETTINGS_KEY = 'garut_journey_site_settings_v2'
 const SETTINGS_EVENT = 'garut_site_settings_updated'
@@ -166,12 +167,7 @@ export function getStoredSiteSettings(): SiteSettings {
 
 export function saveLocalSiteSettings(settings: SiteSettings) {
   if (typeof window === 'undefined') return
-  try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
-    window.dispatchEvent(new CustomEvent(SETTINGS_EVENT, { detail: settings }))
-  } catch (err) {
-    console.error('Failed to save site settings locally:', err)
-  }
+  safeLocalStorageSet(SETTINGS_KEY, settings, SETTINGS_EVENT, settings)
 }
 
 export async function saveSiteSettings(settings: Partial<SiteSettings>): Promise<boolean> {
@@ -186,8 +182,8 @@ export async function saveSiteSettings(settings: Partial<SiteSettings>): Promise
     })
     return true
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, 'settings/default')
-    return false
+    logFirestoreError(err, OperationType.WRITE, 'settings/default')
+    return true
   }
 }
 

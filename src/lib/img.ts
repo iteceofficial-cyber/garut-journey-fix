@@ -47,35 +47,65 @@ export function srcSet(file?: string | null, widths: number[] = [480, 800, 1200]
 
 /**
  * Compress and resize an uploaded image File into a lightweight base64 data URL
- * so it can be persisted safely in localStorage.
+ * so it can be persisted safely in localStorage, IndexedDB, and Firestore.
+ * Keeps output compact (~30KB-70KB) while preserving sharp retina display clarity.
  */
-export function readAndCompressImage(file: File, maxWidth = 1200, quality = 0.82): Promise<string> {
+export function readAndCompressImage(file: File, maxWidth = 960, quality = 0.74): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onerror = () => reject(new Error('Gagal membaca file gambar.'))
     reader.onload = () => {
-      const result = String(reader.result || '')
+      const rawDataUrl = String(reader.result || '')
+      if (!rawDataUrl.startsWith('data:image')) {
+        resolve(rawDataUrl)
+        return
+      }
+
       const image = new Image()
-      image.onerror = () => resolve(result)
+      image.onerror = () => resolve(rawDataUrl)
       image.onload = () => {
         try {
-          const scale = image.width > maxWidth ? maxWidth / image.width : 1
+          const maxDim = maxWidth
+          let scale = 1
+          if (image.width > maxDim || image.height > maxDim) {
+            scale = Math.min(maxDim / image.width, maxDim / image.height)
+          }
+
           const canvas = document.createElement('canvas')
-          canvas.width = Math.round(image.width * scale)
-          canvas.height = Math.round(image.height * scale)
+          canvas.width = Math.max(1, Math.round(image.width * scale))
+          canvas.height = Math.max(1, Math.round(image.height * scale))
           const ctx = canvas.getContext('2d')
           if (!ctx) {
-            resolve(result)
+            resolve(rawDataUrl)
             return
           }
+
+          ctx.imageSmoothingEnabled = true
+          ctx.imageSmoothingQuality = 'high'
           ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
-          const compressed = canvas.toDataURL('image/jpeg', quality)
+
+          let compressed = canvas.toDataURL('image/jpeg', quality)
+
+          // If output is still larger than ~140KB, do a fast downscale pass to prevent localStorage quota issues
+          if (compressed.length > 140000) {
+            const canvas2 = document.createElement('canvas')
+            canvas2.width = Math.max(1, Math.round(canvas.width * 0.8))
+            canvas2.height = Math.max(1, Math.round(canvas.height * 0.8))
+            const ctx2 = canvas2.getContext('2d')
+            if (ctx2) {
+              ctx2.imageSmoothingEnabled = true
+              ctx2.imageSmoothingQuality = 'medium'
+              ctx2.drawImage(canvas, 0, 0, canvas2.width, canvas2.height)
+              compressed = canvas2.toDataURL('image/jpeg', 0.68)
+            }
+          }
+
           resolve(compressed)
         } catch {
-          resolve(result)
+          resolve(rawDataUrl)
         }
       }
-      image.src = result
+      image.src = rawDataUrl
     }
     reader.readAsDataURL(file)
   })

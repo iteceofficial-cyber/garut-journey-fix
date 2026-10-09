@@ -129,11 +129,11 @@ export function ToursManager({ onNotify }: { onNotify: (msg: string) => void }) 
     setCtItineraryText(t.itinerary.map((s) => `${s.time} | ${s.title}`).join('\n'))
   }
 
-  const handleSaveCityTour = (e: FormEvent) => {
+  const handleSaveCityTour = async (e: FormEvent) => {
     e.preventDefault()
     if (!ctName.trim()) return
 
-    const id = editingTourId || slugify(ctName) || `tour-${Date.now()}`
+    const id = editingTourId ? slugify(editingTourId) : slugify(ctName) || `tour-${Date.now()}`
     const itinerary = ctItineraryText
       .split('\n')
       .map((line) => line.trim())
@@ -161,16 +161,20 @@ export function ToursManager({ onNotify }: { onNotify: (msg: string) => void }) 
       image: ctImage.trim() || 'citysquare.png',
     }
 
-    upsertCityTour(newTour)
-    if (ctNumericPrice > 0) {
-      updatePrice(newTour.name, ctNumericPrice)
+    try {
+      await upsertCityTour(newTour)
+      if (ctNumericPrice > 0) {
+        updatePrice(newTour.name, ctNumericPrice)
+      }
+      onNotify(
+        editingTourId
+          ? `City Tour "${newTour.name}" berhasil diperbarui!`
+          : `City Tour baru "${newTour.name}" berhasil ditambahkan!`,
+      )
+      resetCtForm()
+    } catch {
+      onNotify('City tour tersimpan di perangkat.')
     }
-    onNotify(
-      editingTourId
-        ? `City Tour "${newTour.name}" berhasil diperbarui!`
-        : `City Tour baru "${newTour.name}" berhasil ditambahkan!`,
-    )
-    resetCtForm()
   }
 
   const handleDeleteCityTour = (t: CityTour) => {
@@ -213,11 +217,11 @@ export function ToursManager({ onNotify }: { onNotify: (msg: string) => void }) 
     setPkgFeatured(Boolean(p.featured))
   }
 
-  const handleSavePackage = (e: FormEvent) => {
+  const handleSavePackage = async (e: FormEvent) => {
     e.preventDefault()
     if (!pkgName.trim()) return
 
-    const id = editingPkgId || slugify(pkgName) || `pkg-${Date.now()}`
+    const id = editingPkgId ? slugify(editingPkgId) : slugify(pkgName) || `pkg-${Date.now()}`
     const newPkg: TourPackage = {
       id,
       name: pkgName.trim(),
@@ -245,16 +249,20 @@ export function ToursManager({ onNotify }: { onNotify: (msg: string) => void }) 
       featured: pkgFeatured,
     }
 
-    upsertTourPackage(newPkg)
-    if (pkgNumericPrice > 0) {
-      updatePrice(newPkg.name, pkgNumericPrice)
+    try {
+      await upsertTourPackage(newPkg)
+      if (pkgNumericPrice > 0) {
+        updatePrice(newPkg.name, pkgNumericPrice)
+      }
+      onNotify(
+        editingPkgId
+          ? `Paket Wisata "${newPkg.name}" berhasil diperbarui!`
+          : `Paket Wisata baru "${newPkg.name}" berhasil ditambahkan!`,
+      )
+      resetPkgForm()
+    } catch {
+      onNotify('Paket wisata tersimpan di perangkat.')
     }
-    onNotify(
-      editingPkgId
-        ? `Paket Wisata "${newPkg.name}" berhasil diperbarui!`
-        : `Paket Wisata baru "${newPkg.name}" berhasil ditambahkan!`,
-    )
-    resetPkgForm()
   }
 
   const handleDeletePackage = (p: TourPackage) => {

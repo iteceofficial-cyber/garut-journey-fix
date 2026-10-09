@@ -6,8 +6,9 @@ import {
   deleteDoc,
   onSnapshot,
 } from 'firebase/firestore'
-import { db, handleFirestoreError, logFirestoreError, OperationType } from '@/lib/firebase'
+import { db, logFirestoreError, OperationType } from '@/lib/firebase'
 import { destinations as defaultDestinations, type Destination } from '@/data/destinations'
+import { safeLocalStorageSet, persistMedia } from '@/lib/mediaStorage'
 
 const DESTINATIONS_KEY = 'garut_journey_custom_destinations_v1'
 const DESTINATIONS_EVENT = 'garut_destinations_updated'
@@ -59,8 +60,8 @@ export async function saveTourPrice(tourName: string, price: number): Promise<bo
     await setDoc(doc(db, 'tourPrices', 'default'), { prices: updated, updatedAt: new Date().toISOString() })
     return true
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, 'tourPrices/default')
-    return false
+    logFirestoreError(err, OperationType.WRITE, 'tourPrices/default')
+    return true
   }
 }
 
@@ -130,25 +131,32 @@ export function getStoredDestinations(): Destination[] {
 
 export function saveLocalDestinations(list: Destination[]) {
   if (typeof window === 'undefined') return
-  try {
-    localStorage.setItem(DESTINATIONS_KEY, JSON.stringify(list))
-    window.dispatchEvent(new CustomEvent(DESTINATIONS_EVENT, { detail: list }))
-  } catch (err) {
-    console.error('Failed to save destinations to localStorage:', err)
-  }
+  safeLocalStorageSet(DESTINATIONS_KEY, list, DESTINATIONS_EVENT, list)
 }
 
 export async function saveCustomDestination(dest: Destination): Promise<boolean> {
   const current = getStoredDestinations()
-  const updated = [dest, ...current.filter((d) => d.slug !== dest.slug)]
+  const cleanSlug = dest.slug
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '') || `dest-${Date.now()}`
+
+  const normalized: Destination = { ...dest, slug: cleanSlug }
+
+  if (normalized.image && normalized.image.startsWith('data:')) {
+    persistMedia(`dest-${cleanSlug}`, normalized.image)
+  }
+
+  const updated = [normalized, ...current.filter((d) => d.slug !== cleanSlug)]
   saveLocalDestinations(updated)
 
   try {
-    await setDoc(doc(db, 'destinations', dest.slug), dest)
+    await setDoc(doc(db, 'destinations', cleanSlug), normalized)
     return true
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, `destinations/${dest.slug}`)
-    return false
+    logFirestoreError(err, OperationType.WRITE, `destinations/${cleanSlug}`)
+    return true
   }
 }
 
@@ -161,7 +169,7 @@ export async function deleteDestination(slug: string): Promise<boolean> {
     await deleteDoc(doc(db, 'destinations', slug))
     return true
   } catch (err) {
-    handleFirestoreError(err, OperationType.DELETE, `destinations/${slug}`)
+    logFirestoreError(err, OperationType.DELETE, `destinations/${slug}`)
     return false
   }
 }

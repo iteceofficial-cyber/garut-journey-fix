@@ -121,20 +121,24 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
     }
   }
 
-  const handleSaveDish = (e: FormEvent) => {
+  const handleSaveDish = async (e: FormEvent) => {
     e.preventDefault()
     if (!dishName.trim()) return
-    const id = editingDishId || slugify(dishName) || `dish-${Date.now()}`
-    upsertCulinaryItem({
-      id,
-      name: dishName.trim(),
-      priceRange: dishPriceRange.trim() || 'Harga bervariasi',
-      location: dishLocation.trim() || 'Pusat Kota Garut',
-      image: dishImage.trim() || 'sundanese.png',
-      description: dishDesc.trim() || `Kuliner khas Garut ${dishName.trim()}.`,
-    })
-    onNotify(editingDishId ? `Kuliner "${dishName}" berhasil diperbarui!` : `Kuliner "${dishName}" berhasil ditambahkan!`)
-    resetDishForm()
+    const id = editingDishId ? slugify(editingDishId) : slugify(dishName) || `dish-${Date.now()}`
+    try {
+      await upsertCulinaryItem({
+        id,
+        name: dishName.trim(),
+        priceRange: dishPriceRange.trim() || 'Harga bervariasi',
+        location: dishLocation.trim() || 'Pusat Kota Garut',
+        image: dishImage.trim() || 'sundanese.png',
+        description: dishDesc.trim() || `Kuliner khas Garut ${dishName.trim()}.`,
+      })
+      onNotify(editingDishId ? `Kuliner "${dishName}" berhasil diperbarui!` : `Kuliner "${dishName}" berhasil ditambahkan!`)
+      resetDishForm()
+    } catch {
+      onNotify('Terjadi kendala saat menyimpan kuliner, tetapi perubahan tetap tersimpan di perangkat.')
+    }
   }
 
   // --- 2. Gallery Form State (with Upload Gambar) ---
@@ -159,7 +163,7 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
   }
 
   const handleEditGal = (g: GalleryItem) => {
-    setEditingGalId(g.id || g.title)
+    setEditingGalId(g.id || slugify(g.title))
     setGalTitle(g.title)
     setGalCategory(g.category)
     setGalImage(g.image)
@@ -180,7 +184,7 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
     if (!file) return
     setGalUploading(true)
     try {
-      const dataUrl = await readAndCompressImage(file, 1280, 0.84)
+      const dataUrl = await readAndCompressImage(file)
       setGalImage(dataUrl)
       setGalUploadedName(file.name)
       if (!galTitle.trim()) {
@@ -195,24 +199,28 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
     }
   }
 
-  const handleSaveGal = (e: FormEvent) => {
+  const handleSaveGal = async (e: FormEvent) => {
     e.preventDefault()
     if (!galTitle.trim()) return
-    const id = editingGalId || `gal-${Date.now()}`
-    upsertGalleryItem({
-      id,
-      title: galTitle.trim(),
-      category: galCategory,
-      image: galImage.trim() || 'hero.png',
-      description: galDesc.trim() || galTitle.trim(),
-      tall: galTall,
-    })
-    onNotify(
-      editingGalId
-        ? `Foto galeri "${galTitle}" berhasil diperbarui!`
-        : `Foto baru "${galTitle}" berhasil ditambahkan ke Galeri Website!`,
-    )
-    resetGalForm()
+    const id = editingGalId ? slugify(editingGalId) : `gal-${Date.now()}`
+    try {
+      await upsertGalleryItem({
+        id,
+        title: galTitle.trim(),
+        category: galCategory,
+        image: galImage.trim() || 'hero.png',
+        description: galDesc.trim() || galTitle.trim(),
+        tall: galTall,
+      })
+      onNotify(
+        editingGalId
+          ? `Foto galeri "${galTitle}" berhasil diperbarui!`
+          : `Foto baru "${galTitle}" berhasil ditambahkan ke Galeri Website!`,
+      )
+      resetGalForm()
+    } catch {
+      onNotify('Terjadi kendala saat menyimpan foto, tetapi perubahan tetap tersimpan di perangkat.')
+    }
   }
 
   // --- 3. Experiences Form State ---

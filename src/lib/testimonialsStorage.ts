@@ -6,8 +6,9 @@ import {
   deleteDoc,
   onSnapshot,
 } from 'firebase/firestore'
-import { db, handleFirestoreError, logFirestoreError, OperationType } from '@/lib/firebase'
+import { db, logFirestoreError, OperationType } from '@/lib/firebase'
 import { testimonials as defaultTestimonials, type Testimonial } from '@/data/testimonials'
+import { safeLocalStorageSet } from '@/lib/mediaStorage'
 
 const STORAGE_KEY = 'gj:testimonials:v1'
 
@@ -35,7 +36,12 @@ export function getStoredTestimonials(): Testimonial[] {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return defaultTestimonials
     const parsed = JSON.parse(raw) as Testimonial[]
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultTestimonials
+    if (!Array.isArray(parsed) || parsed.length === 0) return defaultTestimonials
+
+    const map = new Map<string, Testimonial>()
+    defaultTestimonials.forEach((t, idx) => map.set(t.id || `def-${idx}`, t))
+    parsed.forEach((t, idx) => map.set(t.id || `parsed-${idx}`, t))
+    return Array.from(map.values())
   } catch {
     return defaultTestimonials
   }
@@ -43,31 +49,31 @@ export function getStoredTestimonials(): Testimonial[] {
 
 export function saveLocalTestimonials(list: Testimonial[]) {
   if (typeof window === 'undefined') return
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
-    window.dispatchEvent(new CustomEvent('gj:testimonials-change'))
-  } catch {
-    // ignore
-  }
+  safeLocalStorageSet(STORAGE_KEY, list, 'gj:testimonials-change')
 }
 
 export async function upsertTestimonial(item: Testimonial): Promise<Testimonial[]> {
   const current = getStoredTestimonials()
-  const id = item.id || `rev-${Date.now()}`
+  const cleanId = (item.id || `rev-${Date.now()}`)
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '') || `rev-${Date.now()}`
+
   const normalized: Testimonial = {
     ...item,
-    id,
+    id: cleanId,
     initials: item.initials?.trim() || getInitials(item.name),
     tone: item.tone?.trim() || getRandomTone(current.length),
   }
-  const idx = current.findIndex((t) => t.id === id)
+  const idx = current.findIndex((t) => t.id === cleanId)
   const next = idx >= 0 ? current.map((t, i) => (i === idx ? normalized : t)) : [normalized, ...current]
   saveLocalTestimonials(next)
 
   try {
-    await setDoc(doc(db, 'testimonials', id), normalized)
+    await setDoc(doc(db, 'testimonials', cleanId), normalized)
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, `testimonials/${id}`)
+    logFirestoreError(err, OperationType.WRITE, `testimonials/${cleanId}`)
   }
   return next
 }
@@ -80,7 +86,7 @@ export async function deleteTestimonial(id: string): Promise<Testimonial[]> {
   try {
     await deleteDoc(doc(db, 'testimonials', id))
   } catch (err) {
-    handleFirestoreError(err, OperationType.DELETE, `testimonials/${id}`)
+    logFirestoreError(err, OperationType.DELETE, `testimonials/${id}`)
   }
   return next
 }
@@ -107,10 +113,18 @@ export function useTestimonials(): Testimonial[] {
       collection(db, 'testimonials'),
       (snapshot) => {
         if (!snapshot.empty) {
-          const remoteList: Testimonial[] = []
-          snapshot.forEach((snap) => remoteList.push(snap.data() as Testimonial))
-          setList(remoteList)
-          saveLocalTestimonials(remoteList)
+          const map = new Map<string, Testimonial>()
+          defaultTestimonials.forEach((t, idx) => map.set(t.id || `def-${idx}`, t))
+          snapshot.forEach((snap) => {
+            const data = snap.data() as Testimonial
+            if (data) {
+              const key = data.id || snap.id
+              map.set(key, data)
+            }
+          })
+          const merged = Array.from(map.values())
+          setList(merged)
+          saveLocalTestimonials(merged)
         }
       },
       (error) => {
