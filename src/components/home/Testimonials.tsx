@@ -8,10 +8,12 @@ import {
   useTestimonials,
 } from '@/lib/testimonialsStorage'
 import { useCityTours, useTourPackages } from '@/lib/toursStorage'
+import { useSiteSettings } from '@/lib/siteSettings'
 import { useLanguage } from '@/lib/i18n'
 
 export function Testimonials() {
   const { t } = useLanguage()
+  const { settings } = useSiteSettings()
   const testimonials = useTestimonials()
   const cityTours = useCityTours()
   const packages = useTourPackages()
@@ -78,7 +80,11 @@ export function Testimonials() {
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <SectionHeading eyebrow={t.testimonials.eyebrow} title={t.testimonials.title} />
+            <SectionHeading
+              eyebrow={settings.testimonialsEyebrow || t.testimonials.eyebrow}
+              title={settings.testimonialsTitle || t.testimonials.title}
+              intro={settings.testimonialsIntro}
+            />
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <div className="inline-flex items-center gap-2 rounded-full bg-ember/10 px-4 py-1.5 text-xs font-semibold text-ember-600">
                 <Star className="h-3.5 w-3.5 fill-ember text-ember" />

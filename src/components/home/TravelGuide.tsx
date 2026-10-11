@@ -4,10 +4,12 @@ import { Img } from '@/components/Img'
 import { Reveal, SectionHeading } from '@/components/Reveal'
 import { formatDate } from '@/data/articles'
 import { useArticles } from '@/lib/articlesStorage'
+import { useSiteSettings } from '@/lib/siteSettings'
 import { useLanguage } from '@/lib/i18n'
 
 export function TravelGuide() {
   const { articles: list } = useArticles()
+  const { settings } = useSiteSettings()
   const { t } = useLanguage()
   const [lead, ...rest] = list.length > 0 ? list : []
 
@@ -18,9 +20,9 @@ export function TravelGuide() {
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <SectionHeading
-            eyebrow={t.guide.eyebrow}
-            title={t.guide.title}
-            intro={t.guide.intro}
+            eyebrow={settings.guideEyebrow || t.guide.eyebrow}
+            title={settings.guideTitle || t.guide.title}
+            intro={settings.guideIntro || t.guide.intro}
           />
           <Link
             to="/admin"

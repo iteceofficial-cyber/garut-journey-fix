@@ -3,6 +3,7 @@ import { DestinationCard } from '@/components/DestinationCard'
 import { Reveal, SectionHeading } from '@/components/Reveal'
 import { categories, type Category } from '@/data/destinations'
 import { useDestinations } from '@/lib/destinationsStorage'
+import { useSiteSettings } from '@/lib/siteSettings'
 import { useLanguage } from '@/lib/i18n'
 
 export function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
@@ -22,6 +23,7 @@ export function Chip({ active, onClick, children }: { active: boolean; onClick: 
 
 export function Destinations() {
   const { destinations } = useDestinations()
+  const { settings } = useSiteSettings()
   const { t } = useLanguage()
   const [cat, setCat] = useState<'All' | Category>('All')
   const list = cat === 'All' ? destinations : destinations.filter((d) => d.categories.includes(cat))
@@ -30,9 +32,9 @@ export function Destinations() {
     <section id="destinations" className="bg-cream-200/60 py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <SectionHeading
-          eyebrow={t.destinations.eyebrow}
-          title={t.destinations.title}
-          intro={t.destinations.intro}
+          eyebrow={settings.destinationsEyebrow || t.destinations.eyebrow}
+          title={settings.destinationsTitle || t.destinations.title}
+          intro={settings.destinationsIntro || t.destinations.intro}
         />
 
         <Reveal delay={100} className="no-scrollbar -mx-5 mt-10 flex gap-2 overflow-x-auto px-5 pb-2">

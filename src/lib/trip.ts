@@ -7,15 +7,19 @@
 import { useEffect, useState } from 'react'
 
 const TOUR_KEY = 'gct:tour'
+const PAX_KEY = 'gct:pax'
 const SAVED_KEY = 'gct:saved'
 const TOUR_EVENT = 'gct:tour'
+const PAX_EVENT = 'gct:pax'
 const SAVED_EVENT = 'gct:saved'
 
-export function selectTour(tour: string) {
+export function selectTour(tour: string, pax?: number) {
   try {
     sessionStorage.setItem(TOUR_KEY, tour)
+    if (pax) sessionStorage.setItem(PAX_KEY, String(pax))
   } catch {}
   window.dispatchEvent(new CustomEvent(TOUR_EVENT, { detail: tour }))
+  if (pax) window.dispatchEvent(new CustomEvent(PAX_EVENT, { detail: pax }))
 }
 
 export function useSelectedTour() {
@@ -29,6 +33,20 @@ export function useSelectedTour() {
     return () => window.removeEventListener(TOUR_EVENT, on)
   }, [])
   return [tour, setTour] as const
+}
+
+export function useSelectedPax() {
+  const [pax, setPax] = useState<number>(2)
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(PAX_KEY)
+      if (raw) setPax(Number(raw) || 2)
+    } catch {}
+    const on = (e: Event) => setPax((e as CustomEvent<number>).detail)
+    window.addEventListener(PAX_EVENT, on)
+    return () => window.removeEventListener(PAX_EVENT, on)
+  }, [])
+  return [pax, setPax] as const
 }
 
 function readSaved(): string[] {

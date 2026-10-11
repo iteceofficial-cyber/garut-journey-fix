@@ -72,6 +72,40 @@ export interface SiteSettings {
   bookingTitle?: string
   bookingSubtitle?: string
   bookingImage?: string
+  // Dynamic Headings for All Front Page Sections
+  destinationsEyebrow?: string
+  destinationsTitle?: string
+  destinationsIntro?: string
+  cityToursEyebrow?: string
+  cityToursTitle?: string
+  cityToursIntro?: string
+  experienceEyebrow?: string
+  experienceTitle?: string
+  experienceIntro?: string
+  culinaryEyebrow?: string
+  culinaryTitle?: string
+  culinaryIntro?: string
+  itineraryEyebrow?: string
+  itineraryTitle?: string
+  itineraryIntro?: string
+  packagesEyebrow?: string
+  packagesTitle?: string
+  packagesIntro?: string
+  galleryEyebrow?: string
+  galleryTitle?: string
+  galleryIntro?: string
+  teamEyebrow?: string
+  teamTitle?: string
+  teamIntro?: string
+  testimonialsEyebrow?: string
+  testimonialsTitle?: string
+  testimonialsIntro?: string
+  guideEyebrow?: string
+  guideTitle?: string
+  guideIntro?: string
+  contactEyebrow?: string
+  contactTitle?: string
+  contactIntro?: string
   // Footer & Theme
   footerTagline?: string
   defaultLanguage: LanguageCode
@@ -138,6 +172,40 @@ export const initialSiteSettings: SiteSettings = {
   storyP2: 'Kami percaya setiap sudut Garut menyimpan cerita berharga — dari penenun sutra alam di pedesaan, perajin jaket kulit di Sukaregang, hingga petani kopi di lereng Gunung Cikuray.',
   storyP3: 'Melalui paket tour yang terkurasi dan pemandu lokal berlisensi, kami mengajak Anda bukan sekadar berkunjung, tetapi merasakan dan menjadi bagian dari kisah manis Swiss van Java.',
   storyWelcome: 'Sampurasun. Selamat datang di Garut.',
+  // Dynamic Headings Defaults
+  destinationsEyebrow: '02 — Destinasi Pilihan',
+  destinationsTitle: 'Eksplorasi Alam & Pesona Priangan',
+  destinationsIntro: 'Dari puncak gunung berapi legendaris, danau rakit bambu yang syahdu, hingga pesona pantai liar Samudra Hindia.',
+  cityToursEyebrow: '03 — Paket City Tour',
+  cityToursTitle: 'Pilihan Rute Wisata Terkurasi',
+  cityToursIntro: 'Jelajahi Garut tanpa ribet bersama armada bersih dan tour leader berlisensi yang siap mendampingi setiap langkah Anda.',
+  experienceEyebrow: '04 — Pengalaman Unik',
+  experienceTitle: 'Pilih Gaya Petualangan Anda',
+  experienceIntro: 'Temukan cara terbaik menikmati kota intan — mulai dari petualangan gunung, healing air hangat, hingga kuliner otentik.',
+  culinaryEyebrow: '05 — Kuliner Otentik',
+  culinaryTitle: 'Cita Rasa Khas Dapur Priangan',
+  culinaryIntro: 'Nikmati kelezatan melegenda dari dodol manis legit, pedas gurih baso aci, hingga renyahnya burayot gula aren asli.',
+  itineraryEyebrow: '06 — Rancang Jadwal',
+  itineraryTitle: 'Bangun Itinerary Impian Anda',
+  itineraryIntro: 'Pilih durasi, preferensi gaya liburan, dan destinasi favorit. Kami buatkan rincian estimasi biaya dan rundown terbaik.',
+  packagesEyebrow: '07 — Paket Wisata Spesial',
+  packagesTitle: 'Semua Kebutuhan Perjalanan Dalam Satu Harga',
+  packagesIntro: 'Semua sudah termasuk tiket wisata, transportasi, pemandu lokal, dan dokumentasi foto kenangan.',
+  galleryEyebrow: '08 — Dokumentasi Visual',
+  galleryTitle: 'Koleksi Potret Keindahan Garut',
+  galleryIntro: 'Momen-momen magis yang berhasil diabadikan para penjelajah di berbagai sudut Swiss van Java.',
+  teamEyebrow: '09 — Tim & Pramuwisata',
+  teamTitle: 'Dipandu Putra Daerah Berlisensi HPI & BNSP',
+  teamIntro: 'Bukan makelar atau pihak ketiga. Kami menjamin setiap perjalanan Anda didampingi oleh pemandu lokal resmi yang ramah dan tersertifikasi.',
+  testimonialsEyebrow: '10 — Ulasan & Cerita Tamu',
+  testimonialsTitle: 'Kata Mereka yang Sudah Menjelajah',
+  testimonialsIntro: 'Kepercayaan ratusan keluarga, komunitas, dan pelancong solo yang telah mempercayakan perjalanan mereka kepada Garut Journey.',
+  guideEyebrow: '11 — Panduan & Artikel',
+  guideTitle: 'Catatan Perjalanan & Tips Wisata',
+  guideIntro: 'Rangkuman panduan praktis, rute terbaik, dan informasi terpercaya seputar pariwisata Kabupaten Garut.',
+  contactEyebrow: '12 — Kontak & Informasi',
+  contactTitle: 'Mulai Perjalanan Anda Bersama Kami',
+  contactIntro: 'Hubungi tim reservasi kami untuk konsultasi rute, cek ketersediaan tanggal, atau penawaran harga khusus rombongan.',
   footerTagline: 'Swiss van Java — Portal pariwisata, destinasi eksotis, panduan kuliner, dan pemesanan city tour resmi Garut.',
   headerAnimation: 'subtle-glow',
   footerAnimation: 'floating-particles',

@@ -28,6 +28,7 @@ import {
   type Style,
 } from '@/data/itinerary'
 import { savePlanSummary, useSavedDestinations } from '@/lib/trip'
+import { useSiteSettings } from '@/lib/siteSettings'
 import { useLanguage } from '@/lib/i18n'
 import { whatsappLink } from '@/data/site'
 
@@ -128,6 +129,8 @@ export function ItineraryBuilder() {
 - Pilihan Hotel: ${customStay}
 Mohon info penawaran resmi dan penyesuaian jadwalnya. Terima kasih!`
 
+  const { settings } = useSiteSettings()
+
   return (
     <section id="itinerary" className="relative overflow-hidden bg-forest py-24 text-cream sm:py-32">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
@@ -135,13 +138,15 @@ Mohon info penawaran resmi dan penyesuaian jadwalnya. Terima kasih!`
           <div>
             <SectionHeading
               dark
-              eyebrow={t.itinerary.eyebrow}
+              eyebrow={settings.itineraryEyebrow || t.itinerary.eyebrow}
               title={
-                <>
-                  {t.itinerary.title} <em className="text-ember">Garut Journey</em>
-                </>
+                settings.itineraryTitle || (
+                  <>
+                    {t.itinerary.title} <em className="text-ember">Garut Journey</em>
+                  </>
+                )
               }
-              intro={t.itinerary.intro}
+              intro={settings.itineraryIntro || t.itinerary.intro}
             />
 
             {/* Custom Long Trip Callout */}

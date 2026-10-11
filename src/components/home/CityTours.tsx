@@ -1,11 +1,13 @@
-import { ArrowRight, Clock, ChevronDown, Compass, Tent } from 'lucide-react'
+import { ArrowRight, BadgePercent, Clock, ChevronDown, Compass, ShieldCheck, Tent } from 'lucide-react'
 import { useState } from 'react'
 import { BookLink, btn } from '@/components/BookLink'
 import { Img } from '@/components/Img'
 import { Reveal, SectionHeading } from '@/components/Reveal'
 import { type CityTour } from '@/data/tours'
 import { useCityTours } from '@/lib/toursStorage'
+import { useSiteSettings } from '@/lib/siteSettings'
 import { useLanguage } from '@/lib/i18n'
+import { TourPriceAndFacilityModal } from '@/components/tours/TourPriceAndFacilityModal'
 
 function isTrekkingOrCamping(tour: CityTour): boolean {
   if (tour.category === 'trekking-camping') return true
@@ -13,7 +15,15 @@ function isTrekkingOrCamping(tour: CityTour): boolean {
   return hay.includes('trek') || hay.includes('camp') || hay.includes('pendaki') || hay.includes('gunung')
 }
 
-function TourCard({ tour, index }: { tour: CityTour; index: number }) {
+function TourCard({
+  tour,
+  index,
+  onOpenModal,
+}: {
+  tour: CityTour
+  index: number
+  onOpenModal: (t: CityTour) => void
+}) {
   const [open, setOpen] = useState(index === 0)
   const isDay = tour.id === 'one-day-city-tour'
   const isTrekCamp = isTrekkingOrCamping(tour)
@@ -47,16 +57,54 @@ function TourCard({ tour, index }: { tour: CityTour; index: number }) {
           ))}
         </ul>
 
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          aria-controls={`itinerary-${tour.id}`}
-          className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-cream hover:text-ember"
-        >
-          {open ? t.cityTours.hideItinerary : t.cityTours.viewItinerary}
-          <ChevronDown className={`h-4 w-4 transition ${open ? 'rotate-180' : ''}`} />
-        </button>
+        {/* Fasilitas Preview & Quick Calculator Trigger */}
+        <div className="mt-6 rounded-2xl bg-white/5 p-4 border border-white/10 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[0.7rem] font-bold uppercase tracking-wider text-cream/70 flex items-center gap-1.5">
+              <ShieldCheck className="h-3.5 w-3.5 text-ember" />
+              <span>Fasilitas Termasuk Paket:</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => onOpenModal(tour)}
+              className="text-[0.7rem] text-ember hover:underline font-bold"
+            >
+              Lihat Semua
+            </button>
+          </div>
+          <p className="text-xs text-cream/80 line-clamp-2">
+            {(tour.facilities || [
+              'Transportasi AC + Driver + BBM',
+              'Guide HPI Garut',
+              'Tiket Masuk Semua Objek',
+              'Makan Khas Sunda',
+              'Asuransi Resmi',
+            ]).join(' • ')}
+          </p>
+        </div>
+
+        <div className="mt-5 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-controls={`itinerary-${tour.id}`}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-cream hover:text-ember"
+          >
+            {open ? t.cityTours.hideItinerary : t.cityTours.viewItinerary}
+            <ChevronDown className={`h-4 w-4 transition ${open ? 'rotate-180' : ''}`} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onOpenModal(tour)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-white/20 text-cream px-3 py-1.5 text-xs font-semibold border border-white/10 transition"
+          >
+            <BadgePercent className="h-3.5 w-3.5 text-ember" />
+            <span>Tarif 1–100 Orang</span>
+          </button>
+        </div>
+
         <div id={`itinerary-${tour.id}`} className={`grid transition-all duration-500 ${open ? 'mt-5 grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
           <ol className="overflow-hidden border-l border-white/15 pl-6">
             {tour.itinerary.map((s) => (
@@ -70,10 +118,17 @@ function TourCard({ tour, index }: { tour: CityTour; index: number }) {
         </div>
 
         <div className="mt-8 flex flex-col gap-5 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p>
+          <div>
             <span className="block text-xs uppercase tracking-widest text-cream/50">{t.cityTours.priceFrom}</span>
             <span className="font-display text-xl text-cream">{tour.price}</span>
-          </p>
+            <button
+              type="button"
+              onClick={() => onOpenModal(tour)}
+              className="text-[0.65rem] text-ember hover:underline block mt-0.5"
+            >
+              Tersedia harga rombongan hingga 100 pax &rarr;
+            </button>
+          </div>
           <BookLink tour={tour.name} className={btn.primary}>
             {isDay ? t.cityTours.bookThisTour : t.cityTours.explorePackage} <ArrowRight className="h-4 w-4" />
           </BookLink>
@@ -85,8 +140,10 @@ function TourCard({ tour, index }: { tour: CityTour; index: number }) {
 
 export function CityTours() {
   const { t } = useLanguage()
+  const { settings } = useSiteSettings()
   const cityTours = useCityTours()
   const [activeFilter, setActiveFilter] = useState<'all' | 'city' | 'trekking-camping'>('all')
+  const [selectedTourModal, setSelectedTourModal] = useState<CityTour | null>(null)
 
   const filteredTours = cityTours.filter((tItem) => {
     if (activeFilter === 'all') return true
@@ -103,13 +160,15 @@ export function CityTours() {
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <SectionHeading
             dark
-            eyebrow={t.cityTours.eyebrow}
+            eyebrow={settings.cityToursEyebrow || t.cityTours.eyebrow}
             title={
-              <>
-                {t.cityTours.title} <em className="text-ember">Garut Journey</em>
-              </>
+              settings.cityToursTitle || (
+                <>
+                  {t.cityTours.title} <em className="text-ember">Garut Journey</em>
+                </>
+              )
             }
-            intro={t.cityTours.intro}
+            intro={settings.cityToursIntro || t.cityTours.intro}
           />
 
           {/* Category Filter Menu for Paket Tour */}
@@ -155,11 +214,20 @@ export function CityTours() {
         <div className="mt-14 space-y-8">
           {filteredTours.map((tItem, i) => (
             <Reveal key={tItem.id} delay={i * 100}>
-              <TourCard tour={tItem} index={i} />
+              <TourCard tour={tItem} index={i} onOpenModal={setSelectedTourModal} />
             </Reveal>
           ))}
         </div>
       </div>
+
+      {/* Pricing & Facility Modal */}
+      {selectedTourModal && (
+        <TourPriceAndFacilityModal
+          tour={selectedTourModal}
+          isOpen={Boolean(selectedTourModal)}
+          onClose={() => setSelectedTourModal(null)}
+        />
+      )}
     </section>
   )
 }

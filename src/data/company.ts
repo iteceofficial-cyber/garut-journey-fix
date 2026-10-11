@@ -1,12 +1,32 @@
+export interface CustomLegalDoc {
+  id: string
+  title: string
+  number: string
+  enabled: boolean
+  status?: 'aktif' | 'proses'
+  notes?: string
+}
+
 export interface CompanyProfileData {
   legalName: string
   brandName: string
   tagline: string
   nib: string
+  nibEnabled?: boolean
+  nibStatus?: 'aktif' | 'proses' | 'none'
   skKemenkumham: string
+  skKemenkumhamEnabled?: boolean
+  skKemenkumhamStatus?: 'aktif' | 'proses' | 'none'
   izinKemenparekraf: string
+  izinKemenparekrafEnabled?: boolean
+  izinKemenparekrafStatus?: 'aktif' | 'proses' | 'none'
   asitaMembership: string
+  asitaMembershipEnabled?: boolean
+  asitaMembershipStatus?: 'aktif' | 'proses' | 'none'
   hpiPartnership: string
+  hpiPartnershipEnabled?: boolean
+  hpiPartnershipStatus?: 'aktif' | 'proses' | 'none'
+  customLegalDocs?: CustomLegalDoc[]
   address: string
   phone: string
   whatsapp: string
@@ -39,10 +59,30 @@ export const COMPANY_PROFILE: CompanyProfileData = {
   brandName: 'Garut Journey',
   tagline: 'Explore Garut, Feel the Story.',
   nib: '1245000983210 (KBLI 79120 - Aktivitas Biro Perjalanan Wisata)',
+  nibEnabled: true,
+  nibStatus: 'aktif',
   skKemenkumham: 'AHU-0038912.AH.01.01.TAHUN 2020',
+  skKemenkumhamEnabled: true,
+  skKemenkumhamStatus: 'aktif',
   izinKemenparekraf: 'IZIN-TDUP/GRT/2021/0084',
+  izinKemenparekrafEnabled: true,
+  izinKemenparekrafStatus: 'aktif',
   asitaMembership: 'ASITA DPC Garut No. 031/ASITA-GRT/2021',
+  asitaMembershipEnabled: true,
+  asitaMembershipStatus: 'aktif',
   hpiPartnership: 'Mitra Resmi DPC HPI (Himpunan Pramuwisata Indonesia) Garut',
+  hpiPartnershipEnabled: true,
+  hpiPartnershipStatus: 'aktif',
+  customLegalDocs: [
+    {
+      id: 'doc-npwp',
+      title: 'NPWP Badan Usaha',
+      number: '42.891.034.9-443.000',
+      enabled: true,
+      status: 'aktif',
+      notes: 'KPP Pratama Garut',
+    },
+  ],
   address: 'Jl. Raya Bayongbong - Cikajang No. 103, Garut Kota, Jawa Barat 44115',
   phone: '+62 (0262) 238-912',
   whatsapp: '+62 851-5645-6791',

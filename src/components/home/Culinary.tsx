@@ -3,10 +3,12 @@ import { Link } from '@tanstack/react-router'
 import { Img } from '@/components/Img'
 import { Reveal, SectionHeading } from '@/components/Reveal'
 import { useCulinary } from '@/lib/contentStorage'
+import { useSiteSettings } from '@/lib/siteSettings'
 import { useLanguage } from '@/lib/i18n'
 
 export function Culinary() {
   const { t } = useLanguage()
+  const { settings } = useSiteSettings()
   const dishes = useCulinary()
 
   return (
@@ -15,9 +17,9 @@ export function Culinary() {
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <SectionHeading
             dark
-            eyebrow={t.culinary.eyebrow}
-            title={t.culinary.title}
-            intro={t.culinary.intro}
+            eyebrow={settings.culinaryEyebrow || t.culinary.eyebrow}
+            title={settings.culinaryTitle || t.culinary.title}
+            intro={settings.culinaryIntro || t.culinary.intro}
           />
           <Reveal delay={100}>
             <Link to="/guide/$slug" params={{ slug: 'surga-kuliner-otentik-garut' }} className="inline-flex items-center gap-2 text-sm font-semibold text-ember hover:underline">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   AlertCircle,
+  Bot,
   Check,
   CheckCircle2,
   Copy,
@@ -8,10 +9,12 @@ import {
   FileCode2,
   FileText,
   Globe2,
+  Lightbulb,
   RotateCcw,
   Search,
   ShieldCheck,
   Sparkles,
+  Wand2,
 } from 'lucide-react'
 import {
   useSeoSettings,
@@ -23,6 +26,10 @@ import {
 import { Img } from '@/components/Img'
 import { useArticles } from '@/lib/articlesStorage'
 import { ArticleSeoChecker } from '@/components/admin/ArticleSeoChecker'
+import {
+  generateOrganicSeoWithAi,
+  type GeneratedOrganicSeo,
+} from '@/lib/aiSeoGenerator'
 
 const AVAILABLE_OG_IMAGES = [
   { file: 'hero.png', label: 'Panorama Garut (Default Hero)' },

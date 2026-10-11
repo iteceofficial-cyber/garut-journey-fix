@@ -121,41 +121,129 @@ function DestinationDetailPage() {
           />
         </div>
 
-        {/* Key Info Cards */}
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="rounded-2xl bg-white p-5 shadow-soft border border-ink/5">
-            <div className="flex items-center gap-2 text-ink/50 text-xs font-bold uppercase tracking-wider">
-              <Clock className="h-4 w-4 text-forest" />
-              <span>{t.detail.openingHours}</span>
+        {/* Key Info Cards: Operational Hours, Ticket Prices & Google Maps */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-5">
+          {/* Jam Operasional */}
+          <div className="rounded-2xl bg-white p-5 sm:p-6 shadow-soft border border-ink/5 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-ink/60 text-xs font-bold uppercase tracking-wider">
+                <Clock className="h-4 w-4 text-forest" />
+                <span>Jam Operasional</span>
+              </div>
+              <div className="mt-4 space-y-2.5">
+                <div className="rounded-xl bg-cream/50 p-2.5 border border-ink/5">
+                  <span className="block text-[0.7rem] font-bold uppercase tracking-wider text-forest">
+                    Hari Kerja (Weekday)
+                  </span>
+                  <p className="mt-0.5 text-sm font-semibold text-ink">
+                    {destination.openingHoursWeekday || destination.openingHours || COMING_SOON}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-amber-50/60 p-2.5 border border-amber-200/40">
+                  <span className="block text-[0.7rem] font-bold uppercase tracking-wider text-ember-700">
+                    Akhir Pekan &amp; Libur (Weekend)
+                  </span>
+                  <p className="mt-0.5 text-sm font-semibold text-ink">
+                    {destination.openingHoursWeekend || destination.openingHours || COMING_SOON}
+                  </p>
+                </div>
+              </div>
             </div>
-            <p className="mt-2 text-sm font-medium text-ink">
-              {destination.openingHours ?? COMING_SOON}
-            </p>
           </div>
 
-          <div className="rounded-2xl bg-white p-5 shadow-soft border border-ink/5">
-            <div className="flex items-center gap-2 text-ink/50 text-xs font-bold uppercase tracking-wider">
-              <DollarSign className="h-4 w-4 text-ember" />
-              <span>{t.detail.ticketPrice}</span>
+          {/* Tarif Tiket Masuk */}
+          <div className="rounded-2xl bg-white p-5 sm:p-6 shadow-soft border border-ink/5 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-ink/60 text-xs font-bold uppercase tracking-wider">
+                <DollarSign className="h-4 w-4 text-ember" />
+                <span>Tarif Tiket Masuk</span>
+              </div>
+              <div className="mt-4 space-y-2.5">
+                {/* Wisatawan Lokal */}
+                <div className="rounded-xl bg-forest/5 p-2.5 border border-forest/10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[0.7rem] font-bold uppercase tracking-wider text-forest">
+                      Wisatawan Lokal
+                    </span>
+                    <span className="text-[0.65rem] rounded-full bg-forest/10 px-2 py-0.5 font-bold text-forest">
+                      Domestik
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-xs text-ink/80">
+                    <span>Weekday:</span>
+                    <strong className="text-ink font-semibold">
+                      {destination.ticketPriceWeekdayLocal || destination.ticketPrice || 'Rp 15.000'}
+                    </strong>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-ink/80 mt-0.5">
+                    <span>Weekend:</span>
+                    <strong className="text-ember-700 font-bold">
+                      {destination.ticketPriceWeekendLocal || destination.ticketPrice || 'Rp 20.000'}
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Wisatawan Mancanegara */}
+                <div className="rounded-xl bg-purple-50/60 p-2.5 border border-purple-200/40">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[0.7rem] font-bold uppercase tracking-wider text-purple-800">
+                      Wisatawan Mancanegara
+                    </span>
+                    <span className="text-[0.65rem] rounded-full bg-purple-100 px-2 py-0.5 font-bold text-purple-700">
+                      Foreigner
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-xs text-ink/80">
+                    <span>Weekday:</span>
+                    <strong className="text-ink font-semibold">
+                      {destination.ticketPriceWeekdayForeigner || 'Rp 50.000'}
+                    </strong>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-ink/80 mt-0.5">
+                    <span>Weekend:</span>
+                    <strong className="text-purple-900 font-bold">
+                      {destination.ticketPriceWeekendForeigner || 'Rp 75.000'}
+                    </strong>
+                  </div>
+                </div>
+              </div>
             </div>
-            <p className="mt-2 text-sm font-medium text-ink">
-              {destination.ticketPrice ?? COMING_SOON}
-            </p>
           </div>
 
-          <div className="rounded-2xl bg-white p-5 shadow-soft border border-ink/5">
-            <div className="flex items-center gap-2 text-ink/50 text-xs font-bold uppercase tracking-wider">
-              <Compass className="h-4 w-4 text-leaf" />
-              <span>{t.detail.locationOnMap}</span>
+          {/* Lokasi & Peta */}
+          <div className="rounded-2xl bg-white p-5 sm:p-6 shadow-soft border border-ink/5 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-ink/60 text-xs font-bold uppercase tracking-wider">
+                <Compass className="h-4 w-4 text-leaf" />
+                <span>{t.detail.locationOnMap}</span>
+              </div>
+              <div className="mt-4 space-y-2">
+                <div className="rounded-xl bg-cream/40 p-3 border border-ink/5">
+                  <span className="text-[0.7rem] text-ink/50 uppercase tracking-wider block font-bold">
+                    Area Wilayah
+                  </span>
+                  <p className="text-sm font-semibold text-ink mt-0.5">{destination.location}</p>
+                </div>
+                {destination.facilities && destination.facilities.length > 0 && (
+                  <div className="rounded-xl bg-cream/40 p-3 border border-ink/5">
+                    <span className="text-[0.7rem] text-ink/50 uppercase tracking-wider block font-bold">
+                      Fasilitas Utama
+                    </span>
+                    <p className="text-xs text-ink/75 mt-0.5 line-clamp-2">
+                      {destination.facilities.join(', ')}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
             <a
               href={mapsLink(destination.mapsQuery)}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-forest hover:text-ember transition"
+              className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-forest/10 hover:bg-forest hover:text-white px-4 py-2.5 text-xs font-bold text-forest transition"
             >
               <span>{t.detail.openGoogleMaps}</span>
-              <span>→</span>
+              <span>&rarr;</span>
             </a>
           </div>
         </div>

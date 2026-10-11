@@ -4,6 +4,7 @@ import { Img } from '@/components/Img'
 import { SectionHeading } from '@/components/Reveal'
 import { galleryFilters, type GalleryItem } from '@/data/gallery'
 import { useGallery } from '@/lib/contentStorage'
+import { useSiteSettings } from '@/lib/siteSettings'
 import { whatsappLink } from '@/data/site'
 import { Chip } from './Destinations'
 import { useLanguage } from '@/lib/i18n'
@@ -12,6 +13,7 @@ export function Gallery() {
   const [filter, setFilter] = useState<(typeof galleryFilters)[number]>('All')
   const [activeItem, setActiveItem] = useState<GalleryItem | null>(null)
   const { t } = useLanguage()
+  const { settings } = useSiteSettings()
   const gallery = useGallery()
   const visibleItems = filter === 'All' ? gallery : gallery.filter((g) => g.category === filter)
 
@@ -20,9 +22,9 @@ export function Gallery() {
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <SectionHeading
-            eyebrow={t.gallery.eyebrow}
-            title={t.gallery.title}
-            intro={t.gallery.intro}
+            eyebrow={settings.galleryEyebrow || t.gallery.eyebrow}
+            title={settings.galleryTitle || t.gallery.title}
+            intro={settings.galleryIntro || t.gallery.intro}
           />
           <div role="group" aria-label="Filter gallery" className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 pb-1 lg:mx-0 lg:px-0">
             {galleryFilters.map((f) => (

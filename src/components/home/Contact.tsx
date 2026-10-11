@@ -4,18 +4,20 @@ import {
   CreditCard,
   Mail,
   MapPin,
+  Users,
 } from 'lucide-react'
 import { useState, type FormEvent, useEffect } from 'react'
 import { Reveal, SectionHeading } from '@/components/Reveal'
 import { WhatsAppIcon } from '@/components/WhatsAppFab'
 import { mapsLink, mapsEmbed, site } from '@/data/site'
 import { formToObject, submitNetlifyForm } from '@/lib/forms'
-import { readPlanSummary, useSelectedTour } from '@/lib/trip'
+import { readPlanSummary, useSelectedTour, useSelectedPax } from '@/lib/trip'
 import { PaymentModal } from '@/components/PaymentModal'
 import { useTourPrices } from '@/lib/destinationsStorage'
 import { useCityTours, useTourPackages } from '@/lib/toursStorage'
 import { useLanguage } from '@/lib/i18n'
 import { useSiteSettings } from '@/lib/siteSettings'
+import { calculatePriceForPax } from '@/data/tours'
 
 const MEETING_POINTS = [
   'Stasiun Kereta Api Garut (KAI)',
@@ -60,7 +62,12 @@ function InquiryForm() {
   const [arrivalDate, setArrivalDate] = useState(today)
   const [meetingTime, setMeetingTime] = useState('08:00 WIB (Standar Tour)')
   const [meetingPoint, setMeetingPoint] = useState('Stasiun Kereta Api Garut (KAI)')
-  const [travelers, setTravelers] = useState(2)
+  const [selectedPax] = useSelectedPax()
+  const [travelers, setTravelers] = useState(selectedPax || 2)
+
+  useEffect(() => {
+    if (selectedPax) setTravelers(selectedPax)
+  }, [selectedPax])
 
   const [pendingBookingData, setPendingBookingData] = useState<{
     fullName: string
@@ -80,6 +87,16 @@ function InquiryForm() {
     if (tour === 'Custom itinerary') setPlan(readPlanSummary())
   }, [tour])
 
+  // Helper to find matched tour / package for tiered pricing
+  const currentTourName = tour || 'Garut One-Day City Tour'
+  const matchedTourObj =
+    packages.find((p) => p.name === currentTourName) ||
+    cityTours.find((c) => c.name === currentTourName)
+
+  const basePrice = prices[currentTourName] || 350000
+  const count = Math.max(1, Math.min(100, travelers || 1))
+  const calculatedPricing = calculatePriceForPax(matchedTourObj?.priceTiers, count, basePrice)
+
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setState('sending')
@@ -88,12 +105,14 @@ function InquiryForm() {
     const fullName = String(formData.get('fullName') || '')
     const email = String(formData.get('email') || '')
     const whatsapp = String(formData.get('whatsapp') || '')
-    const preferredTour = String(formData.get('preferredTour') || 'Garut One-Day City Tour')
+    const preferredTour = String(formData.get('preferredTour') || currentTourName)
     const message = String(formData.get('message') || '')
 
-    const basePrice = prices[preferredTour] || 350000
-    const count = travelers > 0 ? travelers : 1
-    const totalPrice = basePrice * count
+    const selectedObj =
+      packages.find((p) => p.name === preferredTour) ||
+      cityTours.find((c) => c.name === preferredTour)
+    const tourBasePrice = prices[preferredTour] || 350000
+    const finalCalc = calculatePriceForPax(selectedObj?.priceTiers, count, tourBasePrice)
 
     setPendingBookingData({
       fullName,
@@ -105,7 +124,7 @@ function InquiryForm() {
       meetingPoint,
       travelers: count,
       packageOrTour: preferredTour,
-      totalPrice,
+      totalPrice: finalCalc.totalPrice,
       notes: message,
     })
 
@@ -199,15 +218,32 @@ function InquiryForm() {
 
           {/* Jumlah Peserta */}
           <label>
-            <span className={labelCls}>{t.booking.travelers}</span>
+            <div className="flex items-center justify-between">
+              <span className={labelCls}>
+                <Users className="h-3.5 w-3.5 text-forest" />
+                <span>{t.booking.travelers} (1 – 100 Orang)</span>
+              </span>
+              <span className="text-[0.65rem] font-bold text-forest">
+                Rp {calculatedPricing.pricePerPax.toLocaleString('id-ID')} / orang
+              </span>
+            </div>
             <input
               name="travelers"
               type="number"
               min={1}
+              max={100}
               value={travelers}
               onChange={(e) => setTravelers(Number(e.target.value) || 1)}
               className={field}
             />
+            <div className="mt-1 flex items-center justify-between text-[0.7rem] text-ink/60">
+              <span>Total Estimasi: <strong className="text-forest font-bold">Rp {calculatedPricing.totalPrice.toLocaleString('id-ID')}</strong></span>
+              {travelers > 5 && (
+                <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full">
+                  Diskon Rombongan Aktif
+                </span>
+              )}
+            </div>
           </label>
 
           {/* Jam Pertemuan di Meeting Point */}
@@ -314,9 +350,9 @@ export function Contact() {
       <div className="mx-auto grid max-w-7xl gap-12 px-5 lg:grid-cols-[1fr_1.25fr] lg:px-8">
         <div>
           <SectionHeading
-            eyebrow={t.nav.contact}
-            title={t.booking.title}
-            intro={t.booking.subtitle}
+            eyebrow={settings.contactEyebrow || t.nav.contact}
+            title={settings.contactTitle || t.booking.title}
+            intro={settings.contactIntro || t.booking.subtitle}
           />
           <Reveal delay={100}>
             <ul className="mt-10 space-y-3">

@@ -306,10 +306,41 @@ export function AdminDashboard() {
   const [destImage, setDestImage] = useState('papandayan.png')
   const [destShort, setDestShort] = useState('')
   const [destOverview, setDestOverview] = useState('')
+  const [destWhyVisit, setDestWhyVisit] = useState('')
   const [destOpeningHours, setDestOpeningHours] = useState('08.00 - 17.00 WIB')
+  const [destOpeningHoursWeekday, setDestOpeningHoursWeekday] = useState('07.00 - 17.00 WIB (Senin – Jumat)')
+  const [destOpeningHoursWeekend, setDestOpeningHoursWeekend] = useState('06.00 - 18.00 WIB (Sabtu, Minggu & Libur)')
+  const [destTicketPriceWeekdayLocal, setDestTicketPriceWeekdayLocal] = useState('Rp 20.000 / orang')
+  const [destTicketPriceWeekendLocal, setDestTicketPriceWeekendLocal] = useState('Rp 25.000 / orang')
+  const [destTicketPriceWeekdayForeigner, setDestTicketPriceWeekdayForeigner] = useState('Rp 100.000 / orang')
+  const [destTicketPriceWeekendForeigner, setDestTicketPriceWeekendForeigner] = useState('Rp 150.000 / orang')
+  const [destHighlights, setDestHighlights] = useState<string[]>(['Kawah Emas & Hutan Mati', 'Padang Edelweiss', 'Spot Sunrise'])
+  const [destNewHighlight, setDestNewHighlight] = useState('')
+  const [destTravelTips, setDestTravelTips] = useState<string[]>(['Datang pagi hari agar sejuk', 'Bawa jaket hangat'])
+  const [destNewTip, setDestNewTip] = useState('')
   const [destFacilities, setDestFacilities] = useState('Parkir Luas, Toilet, Mushola, Warung Makan')
   const [destUploading, setDestUploading] = useState(false)
   const [logoUploading, setLogoUploading] = useState(false)
+
+  const handleAddDestHighlight = () => {
+    if (!destNewHighlight.trim()) return
+    setDestHighlights([...destHighlights, destNewHighlight.trim()])
+    setDestNewHighlight('')
+  }
+
+  const handleRemoveDestHighlight = (index: number) => {
+    setDestHighlights(destHighlights.filter((_, i) => i !== index))
+  }
+
+  const handleAddDestTravelTip = () => {
+    if (!destNewTip.trim()) return
+    setDestTravelTips([...destTravelTips, destNewTip.trim()])
+    setDestNewTip('')
+  }
+
+  const handleRemoveDestTravelTip = (index: number) => {
+    setDestTravelTips(destTravelTips.filter((_, i) => i !== index))
+  }
 
   const handleDestFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -856,13 +887,19 @@ export function AdminDashboard() {
       mapsQuery: `${destName.trim()}, Garut, Jawa Barat`,
       short: destShort.trim() || destName.trim(),
       overview: destOverview.trim() || `${destName.trim()} adalah salah satu destinasi unggulan di Garut.`,
-      whyVisit: `Pemandangan memukau, udara sejuk khas pegunungan Priangan, dan keindahan alam autentik.`,
-      highlights: ['Panorama Alam', 'Spot Foto Menarik', 'Udara Segar'],
+      whyVisit: destWhyVisit.trim() || `Pemandangan memukau, udara sejuk khas pegunungan Priangan, dan keindahan alam autentik.`,
+      highlights: destHighlights.filter((h) => h.trim().length > 0),
       activities: ['Sightseeing', 'Fotografi', 'Jalan Santai'],
-      travelTips: ['Bawa jaket hangat', 'Datang pagi hari untuk suasana terbaik'],
-      facilities: destFacilities ? destFacilities.split(',').map((f) => f.trim()) : null,
-      openingHours: destOpeningHours.trim() || null,
-      ticketPrice: destTicketPrice.trim() || null,
+      travelTips: destTravelTips.filter((t) => t.trim().length > 0),
+      facilities: destFacilities ? destFacilities.split(',').map((f) => f.trim()).filter(Boolean) : null,
+      openingHours: destOpeningHoursWeekday.trim() || destOpeningHours.trim() || null,
+      ticketPrice: destTicketPriceWeekdayLocal.trim() || destTicketPrice.trim() || null,
+      openingHoursWeekday: destOpeningHoursWeekday.trim() || null,
+      openingHoursWeekend: destOpeningHoursWeekend.trim() || null,
+      ticketPriceWeekdayLocal: destTicketPriceWeekdayLocal.trim() || null,
+      ticketPriceWeekendLocal: destTicketPriceWeekendLocal.trim() || null,
+      ticketPriceWeekdayForeigner: destTicketPriceWeekdayForeigner.trim() || null,
+      ticketPriceWeekendForeigner: destTicketPriceWeekendForeigner.trim() || null,
       gallery: [destImage, 'hero.png'],
       nearby: ['mount-papandayan', 'situ-bagendit'],
     }
@@ -878,6 +915,7 @@ export function AdminDashboard() {
     setDestTicketPrice('')
     setDestShort('')
     setDestOverview('')
+    setDestWhyVisit('')
   }
 
   const handleEditDest = (dest: Destination) => {
@@ -890,7 +928,16 @@ export function AdminDashboard() {
     setDestImage(dest.image || 'papandayan.png')
     setDestShort(dest.short || '')
     setDestOverview(dest.overview || '')
+    setDestWhyVisit(dest.whyVisit || '')
     setDestOpeningHours(dest.openingHours || '08.00 - 17.00 WIB')
+    setDestOpeningHoursWeekday(dest.openingHoursWeekday || dest.openingHours || '07.00 - 17.00 WIB (Senin – Jumat)')
+    setDestOpeningHoursWeekend(dest.openingHoursWeekend || dest.openingHours || '06.00 - 18.00 WIB (Sabtu, Minggu & Libur)')
+    setDestTicketPriceWeekdayLocal(dest.ticketPriceWeekdayLocal || dest.ticketPrice || 'Rp 20.000 / orang')
+    setDestTicketPriceWeekendLocal(dest.ticketPriceWeekendLocal || dest.ticketPrice || 'Rp 25.000 / orang')
+    setDestTicketPriceWeekdayForeigner(dest.ticketPriceWeekdayForeigner || 'Rp 100.000 / orang')
+    setDestTicketPriceWeekendForeigner(dest.ticketPriceWeekendForeigner || 'Rp 150.000 / orang')
+    setDestHighlights(dest.highlights && dest.highlights.length > 0 ? [...dest.highlights] : ['Spot Foto Eksotis', 'Panorama Alam'])
+    setDestTravelTips(dest.travelTips && dest.travelTips.length > 0 ? [...dest.travelTips] : ['Datang pagi hari'])
     setDestFacilities(dest.facilities ? dest.facilities.join(', ') : '')
   }
 
@@ -2765,6 +2812,244 @@ Tim Garut Journey`
                       value={destShort}
                       onChange={(e) => setDestShort(e.target.value)}
                       className="mt-1.5 w-full rounded-xl border border-ink/20 p-3 text-sm text-ink focus:border-forest focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Jam Operasional */}
+                  <div className="sm:col-span-2 rounded-2xl bg-cream/40 p-4 border border-ink/10 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-forest" />
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-forest">
+                        Pengaturan Jam Operasional (Hari Kerja &amp; Libur)
+                      </h4>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-[0.7rem] font-bold uppercase tracking-wider text-ink/70">
+                          Hari Kerja (Weekday) *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Contoh: 07.00 - 17.00 WIB (Senin – Jumat)"
+                          value={destOpeningHoursWeekday}
+                          onChange={(e) => setDestOpeningHoursWeekday(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs text-ink focus:border-forest focus:outline-none font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[0.7rem] font-bold uppercase tracking-wider text-ember-700">
+                          Akhir Pekan &amp; Hari Libur (Weekend) *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Contoh: 06.00 - 18.00 WIB (Sabtu, Minggu & Libur)"
+                          value={destOpeningHoursWeekend}
+                          onChange={(e) => setDestOpeningHoursWeekend(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs text-ink focus:border-forest focus:outline-none font-semibold"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tarif Tiket Masuk Lokal vs Mancanegara */}
+                  <div className="sm:col-span-2 rounded-2xl bg-forest/5 p-4 border border-forest/15 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-ember" />
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-forest">
+                        Rincian Harga Tiket (Wisatawan Lokal &amp; Mancanegara)
+                      </h4>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {/* Lokal Weekday */}
+                      <div className="rounded-xl bg-white p-3 border border-forest/10 space-y-1">
+                        <span className="block text-[0.7rem] font-bold uppercase tracking-wider text-forest">
+                          🇮🇩 Wisatawan Lokal — Hari Kerja (Weekday)
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="Rp 20.000 / orang"
+                          value={destTicketPriceWeekdayLocal}
+                          onChange={(e) => setDestTicketPriceWeekdayLocal(e.target.value)}
+                          className="w-full rounded-lg border border-ink/15 px-3 py-1.5 text-xs text-ink font-semibold focus:border-forest focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Lokal Weekend */}
+                      <div className="rounded-xl bg-white p-3 border border-amber-200/60 space-y-1">
+                        <span className="block text-[0.7rem] font-bold uppercase tracking-wider text-ember-700">
+                          🇮🇩 Wisatawan Lokal — Weekend &amp; Hari Libur
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="Rp 25.000 / orang"
+                          value={destTicketPriceWeekendLocal}
+                          onChange={(e) => setDestTicketPriceWeekendLocal(e.target.value)}
+                          className="w-full rounded-lg border border-ink/15 px-3 py-1.5 text-xs text-ink font-bold focus:border-forest focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Mancanegara Weekday */}
+                      <div className="rounded-xl bg-white p-3 border border-purple-200/60 space-y-1">
+                        <span className="block text-[0.7rem] font-bold uppercase tracking-wider text-purple-700">
+                          🌍 Wisatawan Mancanegara — Hari Kerja (Weekday)
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="Rp 100.000 / orang"
+                          value={destTicketPriceWeekdayForeigner}
+                          onChange={(e) => setDestTicketPriceWeekdayForeigner(e.target.value)}
+                          className="w-full rounded-lg border border-ink/15 px-3 py-1.5 text-xs text-ink font-semibold focus:border-forest focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Mancanegara Weekend */}
+                      <div className="rounded-xl bg-white p-3 border border-purple-300 space-y-1">
+                        <span className="block text-[0.7rem] font-bold uppercase tracking-wider text-purple-900">
+                          🌍 Wisatawan Mancanegara — Weekend &amp; Libur
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="Rp 150.000 / orang"
+                          value={destTicketPriceWeekendForeigner}
+                          onChange={(e) => setDestTicketPriceWeekendForeigner(e.target.value)}
+                          className="w-full rounded-lg border border-ink/15 px-3 py-1.5 text-xs text-ink font-bold focus:border-forest focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Daya Tarik Utama (Highlights) */}
+                  <div className="sm:col-span-2 rounded-2xl bg-white p-4 border border-ink/10 space-y-3">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                      Daya Tarik Utama Destinasi (Highlights)
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {destHighlights.map((hl, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-forest/10 px-3 py-1 text-xs font-semibold text-forest border border-forest/20"
+                        >
+                          <Check className="h-3 w-3 text-forest" />
+                          <span>{hl}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDestHighlight(idx)}
+                            className="ml-1 text-ink/40 hover:text-rose-600 transition"
+                            title="Hapus daya tarik"
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      ))}
+                      {destHighlights.length === 0 && (
+                        <span className="text-xs text-ink/40 italic">Belum ada daya tarik ditambahkan.</span>
+                      )}
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <input
+                        type="text"
+                        placeholder="Ketik daya tarik baru (misal: Kawah Belerang Aktif, Spot Sunrise)..."
+                        value={destNewHighlight}
+                        onChange={(e) => setDestNewHighlight(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleAddDestHighlight()
+                          }
+                        }}
+                        className="flex-1 rounded-xl border border-ink/15 px-3.5 py-2 text-xs text-ink focus:border-forest focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddDestHighlight}
+                        className="inline-flex items-center gap-1 rounded-xl bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-forest-700 transition shrink-0"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Tambah
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Tips Perjalanan (Travel Tips) */}
+                  <div className="sm:col-span-2 rounded-2xl bg-white p-4 border border-ink/10 space-y-3">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                      Tips Perjalanan bagi Pengunjung (Travel Tips)
+                    </label>
+                    <div className="space-y-2">
+                      {destTravelTips.map((tip, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between gap-2 rounded-xl bg-cream/40 p-2.5 text-xs text-ink border border-ink/5"
+                        >
+                          <div className="flex items-start gap-2 min-w-0">
+                            <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-forest text-[0.65rem] font-bold text-cream mt-0.5">
+                              {idx + 1}
+                            </span>
+                            <span className="text-xs text-ink/80">{tip}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDestTravelTip(idx)}
+                            className="text-ink/40 hover:text-rose-600 transition shrink-0 p-1"
+                            title="Hapus tip"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                      {destTravelTips.length === 0 && (
+                        <span className="text-xs text-ink/40 italic">Belum ada tips perjalanan ditambahkan.</span>
+                      )}
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <input
+                        type="text"
+                        placeholder="Ketik tips baru (misal: Bawa jaket tebal, kenakan sepatu olahraga)..."
+                        value={destNewTip}
+                        onChange={(e) => setDestNewTip(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleAddDestTravelTip()
+                          }
+                        }}
+                        className="flex-1 rounded-xl border border-ink/15 px-3.5 py-2 text-xs text-ink focus:border-forest focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddDestTravelTip}
+                        className="inline-flex items-center gap-1 rounded-xl bg-ember px-4 py-2 text-xs font-bold text-white hover:bg-ember-600 transition shrink-0"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Tambah
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Overview & Why Visit */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                      Ulasan Lengkap (Overview)
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Ulasan detail mengenai destinasi..."
+                      value={destOverview}
+                      onChange={(e) => setDestOverview(e.target.value)}
+                      className="mt-1.5 w-full rounded-xl border border-ink/20 p-3 text-xs text-ink focus:border-forest focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                      Mengapa Harus Dikunjungi (Why Visit)
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Alasan utama pelancong wajib datang..."
+                      value={destWhyVisit}
+                      onChange={(e) => setDestWhyVisit(e.target.value)}
+                      className="mt-1.5 w-full rounded-xl border border-ink/20 p-3 text-xs text-ink focus:border-forest focus:outline-none"
                     />
                   </div>
 

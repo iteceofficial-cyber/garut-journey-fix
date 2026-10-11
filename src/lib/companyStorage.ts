@@ -31,6 +31,9 @@ export function getStoredCompanyProfile(): CompanyProfileData {
         pillars: parsed.pillars && Array.isArray(parsed.pillars)
           ? parsed.pillars
           : COMPANY_PROFILE.pillars,
+        customLegalDocs: parsed.customLegalDocs && Array.isArray(parsed.customLegalDocs)
+          ? parsed.customLegalDocs
+          : COMPANY_PROFILE.customLegalDocs,
       }
     }
   } catch (err) {
@@ -56,6 +59,7 @@ export async function saveCompanyProfile(profileUpdates: Partial<CompanyProfileD
     bankAccounts: profileUpdates.bankAccounts || current.bankAccounts,
     mission: profileUpdates.mission || current.mission,
     pillars: profileUpdates.pillars || current.pillars,
+    customLegalDocs: profileUpdates.customLegalDocs || current.customLegalDocs,
   }
 
   saveLocalCompanyProfile(updated)

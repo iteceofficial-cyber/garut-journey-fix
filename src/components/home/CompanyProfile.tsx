@@ -86,32 +86,124 @@ export function CompanyProfile() {
               </p>
 
               <div className="mt-8 space-y-3.5">
-                <div className="flex items-start gap-3 rounded-2xl bg-white/5 p-4 border border-white/10">
-                  <BadgeCheck className="h-5 w-5 text-ember shrink-0 mt-0.5" />
-                  <div>
-                    <span className="text-xs font-semibold text-cream/50 uppercase tracking-wider">Nomor Induk Berusaha (NIB)</span>
-                    <p className="font-mono text-sm font-bold text-cream mt-0.5">{p.nib}</p>
+                {/* 1. NIB */}
+                {p.nibEnabled !== false && p.nib && (
+                  <div className="flex items-start gap-3 rounded-2xl bg-white/5 p-4 border border-white/10">
+                    <BadgeCheck className="h-5 w-5 text-ember shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-cream/50 uppercase tracking-wider">
+                          Nomor Induk Berusaha (NIB)
+                        </span>
+                        {p.nibStatus === 'proses' && (
+                          <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[0.65rem] font-bold text-amber-300">
+                            Dalam Proses
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-mono text-sm font-bold text-cream mt-0.5">{p.nib}</p>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                <div className="flex items-start gap-3 rounded-2xl bg-white/5 p-4 border border-white/10">
-                  <BadgeCheck className="h-5 w-5 text-ember shrink-0 mt-0.5" />
-                  <div>
-                    <span className="text-xs font-semibold text-cream/50 uppercase tracking-wider">SK Pengesahan Kemenkumham RI</span>
-                    <p className="font-mono text-sm font-bold text-cream mt-0.5">{p.skKemenkumham}</p>
+                {/* 2. SK Kemenkumham */}
+                {p.skKemenkumhamEnabled !== false && p.skKemenkumham && (
+                  <div className="flex items-start gap-3 rounded-2xl bg-white/5 p-4 border border-white/10">
+                    <BadgeCheck className="h-5 w-5 text-ember shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-cream/50 uppercase tracking-wider">
+                          SK Pengesahan Kemenkumham RI
+                        </span>
+                        {p.skKemenkumhamStatus === 'proses' && (
+                          <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[0.65rem] font-bold text-amber-300">
+                            Dalam Proses
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-mono text-sm font-bold text-cream mt-0.5">{p.skKemenkumham}</p>
+                    </div>
                   </div>
-                </div>
+                )}
 
+                {/* 3. Izin Kemenparekraf / TDUP (if enabled) */}
+                {p.izinKemenparekrafEnabled !== false && p.izinKemenparekraf && (
+                  <div className="flex items-start gap-3 rounded-2xl bg-white/5 p-4 border border-white/10">
+                    <BadgeCheck className="h-5 w-5 text-ember shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-cream/50 uppercase tracking-wider">
+                          Izin Usaha Pariwisata (Kemenparekraf / TDUP)
+                        </span>
+                        {p.izinKemenparekrafStatus === 'proses' && (
+                          <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[0.65rem] font-bold text-amber-300">
+                            Dalam Proses
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-mono text-sm font-bold text-cream mt-0.5">{p.izinKemenparekraf}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. ASITA & HPI Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="rounded-2xl bg-white/5 p-4 border border-white/10">
-                    <span className="text-xs font-semibold text-cream/50 uppercase tracking-wider">Keanggotaan ASITA</span>
-                    <p className="text-xs font-bold text-cream mt-1">{p.asitaMembership}</p>
-                  </div>
-                  <div className="rounded-2xl bg-white/5 p-4 border border-white/10">
-                    <span className="text-xs font-semibold text-cream/50 uppercase tracking-wider">Kemitraan HPI</span>
-                    <p className="text-xs font-bold text-cream mt-1">{p.hpiPartnership}</p>
-                  </div>
+                  {p.asitaMembershipEnabled !== false && p.asitaMembership && (
+                    <div className="rounded-2xl bg-white/5 p-4 border border-white/10">
+                      <div className="flex items-center justify-between gap-1 mb-1">
+                        <span className="text-xs font-semibold text-cream/50 uppercase tracking-wider">
+                          Keanggotaan ASITA
+                        </span>
+                        {p.asitaMembershipStatus === 'proses' && (
+                          <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[0.6rem] font-bold text-amber-300">
+                            Proses
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs font-bold text-cream">{p.asitaMembership}</p>
+                    </div>
+                  )}
+
+                  {p.hpiPartnershipEnabled !== false && p.hpiPartnership && (
+                    <div className="rounded-2xl bg-white/5 p-4 border border-white/10">
+                      <div className="flex items-center justify-between gap-1 mb-1">
+                        <span className="text-xs font-semibold text-cream/50 uppercase tracking-wider">
+                          Kemitraan HPI
+                        </span>
+                        {p.hpiPartnershipStatus === 'proses' && (
+                          <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[0.6rem] font-bold text-amber-300">
+                            Proses
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs font-bold text-cream">{p.hpiPartnership}</p>
+                    </div>
+                  )}
                 </div>
+
+                {/* 5. Custom Legal Documents */}
+                {p.customLegalDocs &&
+                  p.customLegalDocs
+                    .filter((d) => d.enabled && d.number)
+                    .map((d) => (
+                      <div key={d.id} className="rounded-2xl bg-white/5 p-4 border border-white/10 flex items-start gap-3">
+                        <BadgeCheck className="h-5 w-5 text-ember shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-semibold text-cream/50 uppercase tracking-wider">
+                              {d.title}
+                            </span>
+                            {d.status === 'proses' && (
+                              <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[0.65rem] font-bold text-amber-300">
+                                Dalam Proses
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-mono text-sm font-bold text-cream mt-0.5">{d.number}</p>
+                          {d.notes && <p className="text-[0.7rem] text-cream/60 mt-0.5">{d.notes}</p>}
+                        </div>
+                      </div>
+                    ))}
               </div>
             </div>
 

@@ -1,17 +1,22 @@
-import { Check, Clock, MapPin, Users } from 'lucide-react'
+import { BadgePercent, Check, Clock, Info, MapPin, ShieldCheck, Users } from 'lucide-react'
 import { useState } from 'react'
 import { BookLink, btn } from '@/components/BookLink'
 import { Reveal, SectionHeading } from '@/components/Reveal'
 import { useTourPackages } from '@/lib/toursStorage'
+import { useSiteSettings } from '@/lib/siteSettings'
 import { Chip } from './Destinations'
 import { useLanguage } from '@/lib/i18n'
+import { TourPriceAndFacilityModal } from '@/components/tours/TourPriceAndFacilityModal'
+import { type TourPackage } from '@/data/tours'
 
 const styleFilters = ['All styles', 'Trekking & Camping', 'Nature', 'Culinary', 'Culture', 'Family', 'Adventure', 'Romantic'] as const
 
 export function Packages() {
   const [days, setDays] = useState<number>(0)
   const [style, setStyle] = useState<string>('All styles')
+  const [selectedTourForModal, setSelectedTourForModal] = useState<TourPackage | null>(null)
   const { t } = useLanguage()
+  const { settings } = useSiteSettings()
   const packages = useTourPackages()
 
   const durationFilters = [
@@ -28,9 +33,9 @@ export function Packages() {
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <SectionHeading
           align="center"
-          eyebrow={t.packages.eyebrow}
-          title={t.packages.title}
-          intro={t.packages.intro}
+          eyebrow={settings.packagesEyebrow || t.packages.eyebrow}
+          title={settings.packagesTitle || t.packages.title}
+          intro={settings.packagesIntro || t.packages.intro}
         />
 
         <Reveal delay={100} className="mt-10 flex flex-col items-center gap-3">
@@ -63,9 +68,27 @@ export function Packages() {
                 )}
                 <h3 className="font-display text-3xl">{p.name}</h3>
                 <p className={`mt-1 ${p.featured ? 'text-cream/70' : 'text-ink/60'}`}>{p.tagline}</p>
-                <p className="mt-6">
+                {/* Price & Tier Trigger */}
+                <div className="mt-6 flex flex-col gap-2">
                   <span className="font-display text-2xl">{p.price}</span>
-                </p>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTourForModal(p)}
+                    className={`inline-flex items-center justify-between rounded-2xl p-2.5 text-xs font-semibold transition ${
+                      p.featured
+                        ? 'bg-white/10 text-cream hover:bg-white/20 border border-white/15'
+                        : 'bg-forest/5 text-forest hover:bg-forest/10 border border-forest/15'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 font-bold">
+                      <BadgePercent className="h-4 w-4 text-ember" />
+                      <span>Cek Tarif 1 s/d 100 Orang</span>
+                    </span>
+                    <span className="text-[0.65rem] uppercase tracking-wider underline">
+                      Buka Kalkulator &rarr;
+                    </span>
+                  </button>
+                </div>
 
                 <dl className={`mt-6 space-y-3 border-y py-6 text-sm ${p.featured ? 'border-white/15' : 'border-ink/10'}`}>
                   <div className="flex gap-3">
@@ -82,6 +105,7 @@ export function Packages() {
                   </div>
                 </dl>
 
+                {/* Kolom Fasilitas & Aktivitas */}
                 <div className="mt-6 grid flex-1 gap-6 sm:grid-cols-2 lg:grid-cols-1">
                   <div>
                     <p className={`text-xs font-bold uppercase tracking-[0.2em] ${p.featured ? 'text-cream/50' : 'text-ink/45'}`}>{t.packages.activitiesLabel}</p>
@@ -93,21 +117,60 @@ export function Packages() {
                       ))}
                     </ul>
                   </div>
+
+                  {/* Kolom Fasilitas Paket */}
                   <div>
-                    <p className={`text-xs font-bold uppercase tracking-[0.2em] ${p.featured ? 'text-cream/50' : 'text-ink/45'}`}>{t.packages.includedLabel}</p>
+                    <div className="flex items-center justify-between">
+                      <p className={`text-xs font-bold uppercase tracking-[0.2em] flex items-center gap-1.5 ${p.featured ? 'text-cream/70' : 'text-forest'}`}>
+                        <ShieldCheck className="h-3.5 w-3.5 text-ember" />
+                        <span>Fasilitas Termasuk:</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTourForModal(p)}
+                        className={`text-[0.7rem] underline font-semibold ${p.featured ? 'text-cream/60 hover:text-white' : 'text-forest/70 hover:text-forest'}`}
+                      >
+                        Detail
+                      </button>
+                    </div>
+
                     <ul className="mt-3 space-y-2 text-sm">
-                      {p.included.map((x) => (
+                      {(p.facilities && p.facilities.length > 0 ? p.facilities.slice(0, 5) : p.included.slice(0, 5)).map((x) => (
                         <li key={x} className="flex gap-2">
-                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-ember" aria-hidden="true" /> {x}
+                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-ember" aria-hidden="true" />
+                          <span className="line-clamp-1">{x}</span>
                         </li>
                       ))}
                     </ul>
+
+                    {/* Exclude note if available */}
+                    {p.excluded && p.excluded.length > 0 && (
+                      <div className="mt-3 pt-2 border-t border-current/10">
+                        <span className={`text-[0.65rem] uppercase font-bold tracking-wider block ${p.featured ? 'text-cream/50' : 'text-ink/40'}`}>
+                          Tidak Termasuk:
+                        </span>
+                        <p className={`text-xs italic mt-0.5 line-clamp-1 ${p.featured ? 'text-cream/60' : 'text-ink/60'}`}>
+                          {p.excluded.join(', ')}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <BookLink tour={p.name} className={`${p.featured ? btn.primary : btn.dark} mt-8 w-full`}>
-                  {t.packages.bookBtn} {p.name}
-                </BookLink>
+                <div className="mt-8 flex flex-col gap-2">
+                  <BookLink tour={p.name} className={`${p.featured ? btn.primary : btn.dark} w-full`}>
+                    {t.packages.bookBtn} {p.name}
+                  </BookLink>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTourForModal(p)}
+                    className={`rounded-full py-2 text-xs font-bold transition text-center ${
+                      p.featured ? 'text-cream/80 hover:text-white hover:bg-white/10' : 'text-forest hover:bg-forest/5'
+                    }`}
+                  >
+                    Rincian Tarif 1 – 100 Orang &amp; Fasilitas &rarr;
+                  </button>
+                </div>
               </article>
             </Reveal>
           ))}
@@ -122,6 +185,15 @@ export function Packages() {
           )}
         </div>
       </div>
+
+      {/* Pricing & Facility Modal */}
+      {selectedTourForModal && (
+        <TourPriceAndFacilityModal
+          tour={selectedTourForModal}
+          isOpen={Boolean(selectedTourForModal)}
+          onClose={() => setSelectedTourForModal(null)}
+        />
+      )}
     </section>
   )
 }

@@ -9,6 +9,7 @@ import {
   Sparkles,
   Trash2,
   Upload,
+  Users,
   UtensilsCrossed,
 } from 'lucide-react'
 import { useState, type ChangeEvent, type FormEvent } from 'react'
@@ -30,6 +31,13 @@ import {
   useExperiences,
   useGallery,
 } from '@/lib/contentStorage'
+import {
+  deleteGuideMember,
+  resetTeamToDefault,
+  upsertGuideMember,
+  useTeamGuides,
+} from '@/lib/teamStorage'
+import { type GuideTeamMember } from '@/data/team'
 import { useDestinations } from '@/lib/destinationsStorage'
 import { readAndCompressImage } from '@/lib/img'
 import { useSiteSettings } from '@/lib/siteSettings'
@@ -73,11 +81,12 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
   const dishes = useCulinary()
   const gallery = useGallery()
   const experiences = useExperiences()
+  const team = useTeamGuides()
   const { destinations } = useDestinations()
   const packages = useTourPackages()
   const { settings, saveSiteSettings } = useSiteSettings()
 
-  const [subTab, setSubTab] = useState<'gallery' | 'culinary' | 'experiences' | 'banners'>('gallery')
+  const [subTab, setSubTab] = useState<'gallery' | 'culinary' | 'experiences' | 'banners' | 'team' | 'headings'>('gallery')
 
   // --- 1. Culinary Form State ---
   const [editingDishId, setEditingDishId] = useState<string | null>(null)
@@ -285,6 +294,104 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
   )
   const [bookingImage, setBookingImage] = useState(settings.bookingImage || 'hiking.png')
 
+  // --- 5. Team Guides Form State ---
+  const [editingGuideId, setEditingGuideId] = useState<string | null>(null)
+  const [guideName, setGuideName] = useState('')
+  const [guideNickname, setGuideNickname] = useState('')
+  const [guideRole, setGuideRole] = useState('')
+  const [guideExperience, setGuideExperience] = useState('5+ Tahun')
+  const [guideRating, setGuideRating] = useState('4.9')
+  const [guideReviewCount, setGuideReviewCount] = useState('120')
+  const [guideTotalTrips, setGuideTotalTrips] = useState('250')
+  const [guideBio, setGuideBio] = useState('')
+  const [guideQuote, setGuideQuote] = useState('')
+  const [guideImage, setGuideImage] = useState('hero.png')
+  const [guideUploading, setGuideUploading] = useState(false)
+  const [guideSpecialties, setGuideSpecialties] = useState<string[]>(['Wisata Budaya', 'Pemandu Alam'])
+  const [guideNewSpecialty, setGuideNewSpecialty] = useState('')
+  const [guideCertifications, setGuideCertifications] = useState<string[]>(['Sertifikasi HPI Garut', 'BNSP'])
+  const [guideNewCert, setGuideNewCert] = useState('')
+  const [guideLanguages, setGuideLanguages] = useState<string[]>(['Bahasa Indonesia', 'Basa Sunda'])
+  const [guideNewLang, setGuideNewLang] = useState('')
+
+  const resetGuideForm = () => {
+    setEditingGuideId(null)
+    setGuideName('')
+    setGuideNickname('')
+    setGuideRole('')
+    setGuideExperience('5+ Tahun')
+    setGuideRating('4.9')
+    setGuideReviewCount('120')
+    setGuideTotalTrips('250')
+    setGuideBio('')
+    setGuideQuote('')
+    setGuideImage('hero.png')
+    setGuideSpecialties(['Wisata Budaya', 'Pemandu Alam'])
+    setGuideCertifications(['Sertifikasi HPI Garut', 'BNSP'])
+    setGuideLanguages(['Bahasa Indonesia', 'Basa Sunda'])
+  }
+
+  const handleEditGuide = (g: GuideTeamMember) => {
+    setEditingGuideId(g.id)
+    setGuideName(g.name)
+    setGuideNickname(g.nickname || '')
+    setGuideRole(g.role)
+    setGuideExperience(g.experience || '5+ Tahun')
+    setGuideRating(String(g.rating || 4.9))
+    setGuideReviewCount(String(g.reviewCount || 100))
+    setGuideTotalTrips(String(g.totalTrips || 200))
+    setGuideBio(g.bio)
+    setGuideQuote(g.quote || '')
+    setGuideImage(g.image)
+    setGuideSpecialties(g.specialties || [])
+    setGuideCertifications(g.certifications || [])
+    setGuideLanguages(g.languages || [])
+  }
+
+  const handleGuideFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setGuideUploading(true)
+    try {
+      const dataUrl = await readAndCompressImage(file)
+      setGuideImage(dataUrl)
+      onNotify(`Foto "${file.name}" berhasil diunggah untuk Guide!`)
+    } catch {
+      onNotify('Gagal mengunggah foto guide.')
+    } finally {
+      setGuideUploading(false)
+    }
+  }
+
+  const handleSaveGuide = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!guideName.trim() || !guideRole.trim()) return
+    const id = editingGuideId || slugify(guideName) || `guide-${Date.now()}`
+    try {
+      await upsertGuideMember({
+        id,
+        name: guideName.trim(),
+        nickname: guideNickname.trim() || guideName.trim().split(' ')[0],
+        role: guideRole.trim(),
+        experience: guideExperience.trim() || '5+ Tahun',
+        rating: parseFloat(guideRating) || 4.9,
+        reviewCount: parseInt(guideReviewCount, 10) || 100,
+        totalTrips: parseInt(guideTotalTrips, 10) || 200,
+        bio: guideBio.trim() || `Pemandu wisata berpengalaman di Garut.`,
+        quote: guideQuote.trim() || 'Melayani dengan hati untuk kenyamanan eksplorasi Anda.',
+        image: guideImage.trim() || 'hero.png',
+        specialties: guideSpecialties.length > 0 ? guideSpecialties : ['Pemandu Garut'],
+        certifications: guideCertifications.length > 0 ? guideCertifications : ['HPI Garut'],
+        languages: guideLanguages.length > 0 ? guideLanguages : ['Bahasa Indonesia'],
+        featured: true,
+      })
+      onNotify(editingGuideId ? `Data guide "${guideName}" diperbarui!` : `Guide baru "${guideName}" berhasil ditambahkan!`)
+      resetGuideForm()
+    } catch {
+      onNotify('Terjadi kendala saat menyimpan data guide.')
+    }
+  }
+
   const handleSaveBanners = (e: FormEvent) => {
     e.preventDefault()
     saveSiteSettings({
@@ -346,6 +453,17 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
             <Sparkles className="h-3.5 w-3.5" />
             <span>Banner & Foto Cerita</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setSubTab('team')}
+            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider transition ${
+              subTab === 'team' ? 'bg-forest text-white shadow-sm' : 'bg-cream text-ink/70 hover:bg-ink/10'
+            }`}
+          >
+            <Users className="h-3.5 w-3.5" />
+            <span>Tim Guide ({team.length})</span>
+          </button>
         </div>
 
         {subTab !== 'banners' && (
@@ -364,6 +482,10 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
                 resetExperiencesToDefault()
                 resetExpForm()
                 onNotify('Pilihan pengalaman dikembalikan ke bawaan awal.')
+              } else if (subTab === 'team') {
+                resetTeamToDefault()
+                resetGuideForm()
+                onNotify('Data tim guide dikembalikan ke bawaan awal.')
               }
             }}
             className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 px-4 py-2 text-xs font-semibold text-ink/70 hover:bg-ink/5 transition"
@@ -1125,6 +1247,361 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* 5. TEAM GUIDES MANAGER */}
+      {subTab === 'team' && (
+        <div className="space-y-8">
+          <div className="rounded-3xl bg-white p-6 sm:p-8 shadow-soft border border-ink/5 space-y-6">
+            <div className="border-b border-ink/10 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-widest text-ember">
+                  Pramuwisata Lokal Berlisensi HPI & BNSP (#team)
+                </span>
+                <h2 className="font-display text-2xl font-semibold text-forest mt-1">
+                  {editingGuideId ? `Edit Guide: ${guideName}` : 'Tambah Pemandu / Guide Baru'}
+                </h2>
+                <p className="text-xs text-ink/60 mt-1">
+                  Kelola profil, sertifikasi, rating, foto, dan keahlian spesialisasi para pramuwisata lokal Garut.
+                </p>
+              </div>
+              {editingGuideId && (
+                <button
+                  type="button"
+                  onClick={resetGuideForm}
+                  className="self-start rounded-full bg-ink/5 px-4 py-2 text-xs font-semibold text-ink/70 hover:bg-ink/10"
+                >
+                  + Tambah Guide Baru
+                </button>
+              )}
+            </div>
+
+            <form onSubmit={handleSaveGuide} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                  Nama Lengkap Pemandu *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Kang Asep Saepudin"
+                  value={guideName}
+                  onChange={(e) => setGuideName(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-ink/20 px-4 py-2.5 text-sm text-ink font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                  Nama Panggilan / Akrab
+                </label>
+                <input
+                  type="text"
+                  placeholder="Kang Asep"
+                  value={guideNickname}
+                  onChange={(e) => setGuideNickname(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-ink/20 px-4 py-2.5 text-sm text-ink"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                  Peran / Spesialisasi Utama *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Senior Mountain & Highland Trekking Guide"
+                  value={guideRole}
+                  onChange={(e) => setGuideRole(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-ink/20 px-4 py-2.5 text-sm text-ink font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                  Pengalaman Terbang
+                </label>
+                <input
+                  type="text"
+                  placeholder="12+ Tahun"
+                  value={guideExperience}
+                  onChange={(e) => setGuideExperience(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-ink/20 px-4 py-2.5 text-sm text-ink"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                  Rating Bintang (1.0 - 5.0)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="1"
+                  max="5"
+                  value={guideRating}
+                  onChange={(e) => setGuideRating(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-ink/20 px-4 py-2.5 text-sm text-ink"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                  Total Trip Sukses
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={guideTotalTrips}
+                  onChange={(e) => setGuideTotalTrips(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-ink/20 px-4 py-2.5 text-sm text-ink"
+                />
+              </div>
+
+              <div className="sm:col-span-2 lg:col-span-3">
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                  Foto Pemandu
+                </label>
+                <div className="mt-1.5 flex gap-2">
+                  <input
+                    type="text"
+                    value={guideImage}
+                    onChange={(e) => setGuideImage(e.target.value)}
+                    placeholder="URL foto atau nama file (misal: hero.png)"
+                    className="flex-1 rounded-xl border border-ink/20 px-4 py-2.5 text-sm text-ink"
+                  />
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-forest px-4 py-2.5 text-xs font-bold text-white hover:bg-forest-700 transition shrink-0">
+                    <Upload className="h-4 w-4" />
+                    <span>{guideUploading ? '...' : 'Upload Foto'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleGuideFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="sm:col-span-2 lg:col-span-3">
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                  Biografi Singkat Pemandu
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Putra asli Cisurupan yang telah memandu lebih dari 850 rombongan..."
+                  value={guideBio}
+                  onChange={(e) => setGuideBio(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-ink/20 p-3 text-sm text-ink"
+                />
+              </div>
+
+              <div className="sm:col-span-2 lg:col-span-3">
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                  Kutipan / Motto Pemandu (Quote)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Gunung bukan sekadar pemandangan, melainkan ruang refleksi..."
+                  value={guideQuote}
+                  onChange={(e) => setGuideQuote(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-ink/20 px-4 py-2.5 text-sm text-ink italic"
+                />
+              </div>
+
+              {/* Spesialisasi */}
+              <div className="sm:col-span-2 lg:col-span-3 rounded-2xl bg-cream/40 p-4 border border-ink/10 space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-forest">
+                  Spesialisasi & Destinasi Favorit:
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {guideSpecialties.map((s, i) => (
+                    <span key={i} className="inline-flex items-center gap-1 rounded-full bg-forest/10 px-3 py-1 text-xs font-bold text-forest">
+                      <span>{s}</span>
+                      <button
+                        type="button"
+                        onClick={() => setGuideSpecialties(guideSpecialties.filter((_, idx) => idx !== i))}
+                        className="hover:text-rose-600"
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    placeholder="Tambah keahlian (misal: Gunung Papandayan, Wisata Budaya)..."
+                    value={guideNewSpecialty}
+                    onChange={(e) => setGuideNewSpecialty(e.target.value)}
+                    className="flex-1 rounded-xl border border-ink/15 bg-white px-3 py-1.5 text-xs text-ink"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (guideNewSpecialty.trim()) {
+                        setGuideSpecialties([...guideSpecialties, guideNewSpecialty.trim()])
+                        setGuideNewSpecialty('')
+                      }
+                    }}
+                    className="rounded-xl bg-forest px-3 py-1.5 text-xs font-bold text-white hover:bg-forest-700"
+                  >
+                    + Tambah
+                  </button>
+                </div>
+              </div>
+
+              {/* Sertifikasi */}
+              <div className="sm:col-span-2 lg:col-span-3 rounded-2xl bg-cream/40 p-4 border border-ink/10 space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-forest">
+                  Sertifikasi & Lisensi Resmi:
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {guideCertifications.map((c, i) => (
+                    <span key={i} className="inline-flex items-center gap-1 rounded-full bg-forest/10 px-3 py-1 text-xs font-bold text-forest">
+                      <span>{c}</span>
+                      <button
+                        type="button"
+                        onClick={() => setGuideCertifications(guideCertifications.filter((_, idx) => idx !== i))}
+                        className="hover:text-rose-600"
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    placeholder="Tambah sertifikasi (misal: Lisensi HPI Garut No. 042)..."
+                    value={guideNewCert}
+                    onChange={(e) => setGuideNewCert(e.target.value)}
+                    className="flex-1 rounded-xl border border-ink/15 bg-white px-3 py-1.5 text-xs text-ink"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (guideNewCert.trim()) {
+                        setGuideCertifications([...guideCertifications, guideNewCert.trim()])
+                        setGuideNewCert('')
+                      }
+                    }}
+                    className="rounded-xl bg-forest px-3 py-1.5 text-xs font-bold text-white hover:bg-forest-700"
+                  >
+                    + Tambah
+                  </button>
+                </div>
+              </div>
+
+              {/* Penguasaan Bahasa */}
+              <div className="sm:col-span-2 lg:col-span-3 rounded-2xl bg-cream/40 p-4 border border-ink/10 space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-forest">
+                  Bahasa yang Dikuasai:
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {guideLanguages.map((l, i) => (
+                    <span key={i} className="inline-flex items-center gap-1 rounded-full bg-forest/10 px-3 py-1 text-xs font-bold text-forest">
+                      <span>{l}</span>
+                      <button
+                        type="button"
+                        onClick={() => setGuideLanguages(guideLanguages.filter((_, idx) => idx !== i))}
+                        className="hover:text-rose-600"
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    placeholder="Tambah bahasa (misal: English, Arabic)..."
+                    value={guideNewLang}
+                    onChange={(e) => setGuideNewLang(e.target.value)}
+                    className="flex-1 rounded-xl border border-ink/15 bg-white px-3 py-1.5 text-xs text-ink"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (guideNewLang.trim()) {
+                        setGuideLanguages([...guideLanguages, guideNewLang.trim()])
+                        setGuideNewLang('')
+                      }
+                    }}
+                    className="rounded-xl bg-forest px-3 py-1.5 text-xs font-bold text-white hover:bg-forest-700"
+                  >
+                    + Tambah
+                  </button>
+                </div>
+              </div>
+
+              <div className="sm:col-span-2 lg:col-span-3 flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 rounded-full bg-forest px-6 py-3 text-xs font-bold uppercase tracking-wider text-white shadow hover:bg-forest-700"
+                >
+                  <Check className="h-4 w-4" />
+                  <span>{editingGuideId ? 'Simpan Perubahan Pemandu' : 'Tambahkan Pemandu'}</span>
+                </button>
+                {editingGuideId && (
+                  <button
+                    type="button"
+                    onClick={resetGuideForm}
+                    className="rounded-full border border-ink/20 px-5 py-3 text-xs font-semibold text-ink/70"
+                  >
+                    Batal
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+
+          {/* List Guides */}
+          <div className="rounded-3xl bg-white p-6 sm:p-8 shadow-soft border border-ink/5 space-y-4">
+            <h3 className="font-display text-xl font-semibold text-forest">
+              Daftar Pemandu Lokal Garut ({team.length})
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {team.map((m) => (
+                <div key={m.id} className="rounded-2xl border border-ink/10 bg-cream/30 p-4 flex flex-col justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="h-14 w-14 rounded-xl overflow-hidden bg-forest/10 shrink-0">
+                      <Img file={m.image} alt={m.name} className="h-full w-full object-cover" />
+                    </div>
+                    <div>
+                      <h4 className="font-display text-sm font-bold text-ink">{m.name}</h4>
+                      <p className="text-[0.7rem] text-forest font-semibold">{m.role}</p>
+                      <p className="text-[0.65rem] text-ink/60 mt-0.5">
+                        ⭐ {m.rating} ({m.totalTrips}+ Trip) &bull; {m.experience}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-ink/75 line-clamp-2 italic">"{m.quote || m.bio}"</p>
+                  <div className="flex justify-end gap-1.5 pt-2 border-t border-ink/10">
+                    <button
+                      type="button"
+                      onClick={() => handleEditGuide(m)}
+                      className="rounded-lg bg-forest/10 px-3 py-1 text-xs font-bold text-forest hover:bg-forest hover:text-white transition"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        deleteGuideMember(m.id)
+                        onNotify(`Pemandu "${m.name}" dihapus.`)
+                      }}
+                      className="rounded-lg bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700 hover:bg-rose-600 hover:text-white transition"
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>

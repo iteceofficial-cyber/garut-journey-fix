@@ -27,6 +27,21 @@ export function DestinationCard({ d, large = false }: { d: Destination; large?: 
         </p>
         <h3 className="font-display mt-2 text-2xl text-ink">{d.name}</h3>
         <p className="mt-2 flex-1 leading-relaxed text-ink/65">{d.short}</p>
+
+        {/* Info Badges (Tiket & Jam Operasional) */}
+        <div className="mt-3 flex flex-wrap items-center gap-2 pt-2 border-t border-ink/5 text-[0.72rem]">
+          {(d.ticketPriceWeekdayLocal || d.ticketPrice) && (
+            <span className="rounded-lg bg-forest/10 px-2 py-0.5 font-bold text-forest">
+              Tiket: {d.ticketPriceWeekdayLocal || d.ticketPrice}
+            </span>
+          )}
+          {(d.openingHoursWeekday || d.openingHours) && (
+            <span className="rounded-lg bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-800">
+              {d.openingHoursWeekday || d.openingHours}
+            </span>
+          )}
+        </div>
+
         <Link
           to="/destinations/$slug"
           params={{ slug: d.slug }}

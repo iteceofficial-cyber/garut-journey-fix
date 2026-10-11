@@ -7,12 +7,14 @@ import { Reveal, SectionHeading } from '@/components/Reveal'
 import { useDestinations } from '@/lib/destinationsStorage'
 import { useExperiences } from '@/lib/contentStorage'
 import { useTourPackages } from '@/lib/toursStorage'
+import { useSiteSettings } from '@/lib/siteSettings'
 import { useLanguage } from '@/lib/i18n'
 
 export function ChooseExperience() {
   const experiences = useExperiences()
   const { destinations } = useDestinations()
   const packages = useTourPackages()
+  const { settings } = useSiteSettings()
   const [active, setActive] = useState(experiences[0]?.id || 'nature')
   const exp = experiences.find((e) => e.id === active) ?? experiences[0]
   const { t } = useLanguage()
@@ -24,9 +26,9 @@ export function ChooseExperience() {
     <section id="experience" className="py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <SectionHeading
-          eyebrow={t.experience.eyebrow}
-          title={t.experience.title}
-          intro={t.experience.intro}
+          eyebrow={settings.experienceEyebrow || t.experience.eyebrow}
+          title={settings.experienceTitle || t.experience.title}
+          intro={settings.experienceIntro || t.experience.intro}
         />
 
         <Reveal delay={100}>

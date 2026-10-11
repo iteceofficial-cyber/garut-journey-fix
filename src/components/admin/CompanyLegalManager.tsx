@@ -260,96 +260,342 @@ export function CompanyLegalManager() {
                 02 &bull; Dokumen Legalitas &amp; Perizinan
               </span>
               <h3 className="font-display text-xl font-semibold text-forest mt-1">
-                Nomor Legalitas &amp; Sertifikasi Resmi Pemerintah
+                Kelola Legalitas, SK &amp; Keanggotaan Asosiasi
               </h3>
+              <p className="text-xs text-ink/65 mt-1">
+                Sesuaikan dokumen legalitas yang dimiliki saat ini. Dokumen yang dinonaktifkan atau kosong otomatis <strong>tidak akan ditampilkan</strong> di website publik.
+              </p>
             </div>
             <ShieldCheck className="h-6 w-6 text-ember" />
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2">
-            <div className="rounded-2xl border border-ink/10 bg-cream/20 p-4 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-forest">
-                <BadgeCheck className="h-4 w-4 text-ember shrink-0" />
-                <span>Nomor Induk Berusaha (NIB) *</span>
+            {/* 1. NIB */}
+            <div className={`rounded-2xl border p-4 space-y-3 transition ${
+              formData.nibEnabled !== false ? 'border-ink/15 bg-cream/20' : 'border-ink/10 bg-zinc-50 opacity-70'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-forest">
+                  <BadgeCheck className="h-4 w-4 text-ember shrink-0" />
+                  <span>Nomor Induk Berusaha (NIB)</span>
+                </div>
+                <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.nibEnabled !== false}
+                    onChange={(e) => handleFieldChange('nibEnabled', e.target.checked)}
+                    className="rounded text-forest focus:ring-forest"
+                  />
+                  <span className={formData.nibEnabled !== false ? 'text-forest' : 'text-ink/40'}>
+                    {formData.nibEnabled !== false ? 'Tampilkan' : 'Sembunyikan'}
+                  </span>
+                </label>
               </div>
+
               <input
                 type="text"
-                required
-                value={formData.nib}
+                value={formData.nib || ''}
                 onChange={(e) => handleFieldChange('nib', e.target.value)}
-                placeholder="Nomor NIB dan KBLI..."
-                className="w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs font-mono font-bold text-ink focus:border-forest focus:outline-none"
+                placeholder="Nomor NIB dan KBLI (kosongkan jika belum ada)..."
+                disabled={formData.nibEnabled === false}
+                className="w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs font-mono font-bold text-ink focus:border-forest focus:outline-none disabled:bg-zinc-100"
               />
-              <p className="text-[0.65rem] text-ink/60">
-                Misal: 1245000983210 (KBLI 79120 - Biro Perjalanan Wisata)
-              </p>
+
+              <div className="flex items-center justify-between text-[0.7rem]">
+                <span className="text-ink/60">Status Dokumen:</span>
+                <select
+                  value={formData.nibStatus || 'aktif'}
+                  onChange={(e) => handleFieldChange('nibStatus', e.target.value)}
+                  disabled={formData.nibEnabled === false}
+                  className="rounded-lg border border-ink/15 bg-white px-2 py-1 text-xs text-ink font-semibold"
+                >
+                  <option value="aktif">Terbit & Aktif</option>
+                  <option value="proses">Dalam Proses Pengajuan</option>
+                  <option value="none">Belum Tersedia</option>
+                </select>
+              </div>
             </div>
 
-            <div className="rounded-2xl border border-ink/10 bg-cream/20 p-4 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-forest">
-                <BadgeCheck className="h-4 w-4 text-ember shrink-0" />
-                <span>SK Pengesahan Kemenkumham RI *</span>
+            {/* 2. SK Kemenkumham */}
+            <div className={`rounded-2xl border p-4 space-y-3 transition ${
+              formData.skKemenkumhamEnabled !== false ? 'border-ink/15 bg-cream/20' : 'border-ink/10 bg-zinc-50 opacity-70'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-forest">
+                  <BadgeCheck className="h-4 w-4 text-ember shrink-0" />
+                  <span>SK Pengesahan Kemenkumham RI</span>
+                </div>
+                <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.skKemenkumhamEnabled !== false}
+                    onChange={(e) => handleFieldChange('skKemenkumhamEnabled', e.target.checked)}
+                    className="rounded text-forest focus:ring-forest"
+                  />
+                  <span className={formData.skKemenkumhamEnabled !== false ? 'text-forest' : 'text-ink/40'}>
+                    {formData.skKemenkumhamEnabled !== false ? 'Tampilkan' : 'Sembunyikan'}
+                  </span>
+                </label>
               </div>
+
               <input
                 type="text"
-                required
-                value={formData.skKemenkumham}
+                value={formData.skKemenkumham || ''}
                 onChange={(e) => handleFieldChange('skKemenkumham', e.target.value)}
-                placeholder="AHU-0038912.AH.01.01.TAHUN 2020"
-                className="w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs font-mono font-bold text-ink focus:border-forest focus:outline-none"
+                placeholder="AHU-0038912.AH.01.01.TAHUN 2020 (opsional)..."
+                disabled={formData.skKemenkumhamEnabled === false}
+                className="w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs font-mono font-bold text-ink focus:border-forest focus:outline-none disabled:bg-zinc-100"
               />
-              <p className="text-[0.65rem] text-ink/60">
-                Bukti akta pendirian perseroan disahkan oleh Menkumham RI
-              </p>
+
+              <div className="flex items-center justify-between text-[0.7rem]">
+                <span className="text-ink/60">Status Dokumen:</span>
+                <select
+                  value={formData.skKemenkumhamStatus || 'aktif'}
+                  onChange={(e) => handleFieldChange('skKemenkumhamStatus', e.target.value)}
+                  disabled={formData.skKemenkumhamEnabled === false}
+                  className="rounded-lg border border-ink/15 bg-white px-2 py-1 text-xs text-ink font-semibold"
+                >
+                  <option value="aktif">Terbit & Aktif</option>
+                  <option value="proses">Dalam Proses Pengajuan</option>
+                  <option value="none">Belum Tersedia</option>
+                </select>
+              </div>
             </div>
 
-            <div className="rounded-2xl border border-ink/10 bg-cream/20 p-4 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-forest">
-                <Award className="h-4 w-4 text-ember shrink-0" />
-                <span>Izin Kemenparekraf / TDUP</span>
+            {/* 3. Izin Kemenparekraf / TDUP */}
+            <div className={`rounded-2xl border p-4 space-y-3 transition ${
+              formData.izinKemenparekrafEnabled !== false ? 'border-ink/15 bg-cream/20' : 'border-ink/10 bg-zinc-50 opacity-70'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-forest">
+                  <Award className="h-4 w-4 text-ember shrink-0" />
+                  <span>Izin Kemenparekraf / TDUP</span>
+                </div>
+                <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.izinKemenparekrafEnabled !== false}
+                    onChange={(e) => handleFieldChange('izinKemenparekrafEnabled', e.target.checked)}
+                    className="rounded text-forest focus:ring-forest"
+                  />
+                  <span className={formData.izinKemenparekrafEnabled !== false ? 'text-forest' : 'text-ink/40'}>
+                    {formData.izinKemenparekrafEnabled !== false ? 'Tampilkan' : 'Sembunyikan'}
+                  </span>
+                </label>
               </div>
+
               <input
                 type="text"
-                value={formData.izinKemenparekraf}
+                value={formData.izinKemenparekraf || ''}
                 onChange={(e) => handleFieldChange('izinKemenparekraf', e.target.value)}
-                placeholder="IZIN-TDUP/GRT/2021/0084"
-                className="w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs font-mono text-ink focus:border-forest focus:outline-none"
+                placeholder="IZIN-TDUP/GRT/2021/0084 (opsional)..."
+                disabled={formData.izinKemenparekrafEnabled === false}
+                className="w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs font-mono text-ink focus:border-forest focus:outline-none disabled:bg-zinc-100"
               />
-              <p className="text-[0.65rem] text-ink/60">
-                Tanda Daftar Usaha Pariwisata dari Kementerian Pariwisata
-              </p>
+
+              <div className="flex items-center justify-between text-[0.7rem]">
+                <span className="text-ink/60">Status Dokumen:</span>
+                <select
+                  value={formData.izinKemenparekrafStatus || 'aktif'}
+                  onChange={(e) => handleFieldChange('izinKemenparekrafStatus', e.target.value)}
+                  disabled={formData.izinKemenparekrafEnabled === false}
+                  className="rounded-lg border border-ink/15 bg-white px-2 py-1 text-xs text-ink font-semibold"
+                >
+                  <option value="aktif">Terbit & Aktif</option>
+                  <option value="proses">Dalam Proses Pengajuan</option>
+                  <option value="none">Belum Tersedia</option>
+                </select>
+              </div>
             </div>
 
-            <div className="rounded-2xl border border-ink/10 bg-cream/20 p-4 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-forest">
-                <Award className="h-4 w-4 text-ember shrink-0" />
-                <span>Keanggotaan ASITA</span>
+            {/* 4. Keanggotaan ASITA */}
+            <div className={`rounded-2xl border p-4 space-y-3 transition ${
+              formData.asitaMembershipEnabled !== false ? 'border-ink/15 bg-cream/20' : 'border-ink/10 bg-zinc-50 opacity-70'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-forest">
+                  <Award className="h-4 w-4 text-ember shrink-0" />
+                  <span>Keanggotaan ASITA</span>
+                </div>
+                <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.asitaMembershipEnabled !== false}
+                    onChange={(e) => handleFieldChange('asitaMembershipEnabled', e.target.checked)}
+                    className="rounded text-forest focus:ring-forest"
+                  />
+                  <span className={formData.asitaMembershipEnabled !== false ? 'text-forest' : 'text-ink/40'}>
+                    {formData.asitaMembershipEnabled !== false ? 'Tampilkan' : 'Sembunyikan'}
+                  </span>
+                </label>
               </div>
+
               <input
                 type="text"
-                value={formData.asitaMembership}
+                value={formData.asitaMembership || ''}
                 onChange={(e) => handleFieldChange('asitaMembership', e.target.value)}
-                placeholder="ASITA DPC Garut No. 031/ASITA-GRT/2021"
-                className="w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs text-ink focus:border-forest focus:outline-none"
+                placeholder="ASITA DPC Garut No. 031/ASITA-GRT/2021 (opsional)..."
+                disabled={formData.asitaMembershipEnabled === false}
+                className="w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs text-ink focus:border-forest focus:outline-none disabled:bg-zinc-100"
               />
-              <p className="text-[0.65rem] text-ink/60">
-                Asosiasi Perusahaan Perjalanan Wisata Indonesia
-              </p>
+
+              <div className="flex items-center justify-between text-[0.7rem]">
+                <span className="text-ink/60">Status Keanggotaan:</span>
+                <select
+                  value={formData.asitaMembershipStatus || 'aktif'}
+                  onChange={(e) => handleFieldChange('asitaMembershipStatus', e.target.value)}
+                  disabled={formData.asitaMembershipEnabled === false}
+                  className="rounded-lg border border-ink/15 bg-white px-2 py-1 text-xs text-ink font-semibold"
+                >
+                  <option value="aktif">Anggota Aktif Resmi</option>
+                  <option value="proses">Proses Registrasi Keanggotaan</option>
+                  <option value="none">Belum Menjadi Anggota</option>
+                </select>
+              </div>
             </div>
 
-            <div className="rounded-2xl border border-ink/10 bg-cream/20 p-4 space-y-2 sm:col-span-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-forest">
-                <BadgeCheck className="h-4 w-4 text-ember shrink-0" />
-                <span>Kemitraan Resmi Pemandu HPI (Himpunan Pramuwisata Indonesia)</span>
+            {/* 5. Kemitraan HPI */}
+            <div className={`rounded-2xl border p-4 space-y-3 sm:col-span-2 transition ${
+              formData.hpiPartnershipEnabled !== false ? 'border-ink/15 bg-cream/20' : 'border-ink/10 bg-zinc-50 opacity-70'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-forest">
+                  <BadgeCheck className="h-4 w-4 text-ember shrink-0" />
+                  <span>Kemitraan Resmi Pemandu HPI (Himpunan Pramuwisata Indonesia)</span>
+                </div>
+                <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.hpiPartnershipEnabled !== false}
+                    onChange={(e) => handleFieldChange('hpiPartnershipEnabled', e.target.checked)}
+                    className="rounded text-forest focus:ring-forest"
+                  />
+                  <span className={formData.hpiPartnershipEnabled !== false ? 'text-forest' : 'text-ink/40'}>
+                    {formData.hpiPartnershipEnabled !== false ? 'Tampilkan' : 'Sembunyikan'}
+                  </span>
+                </label>
               </div>
+
               <input
                 type="text"
-                value={formData.hpiPartnership}
+                value={formData.hpiPartnership || ''}
                 onChange={(e) => handleFieldChange('hpiPartnership', e.target.value)}
-                placeholder="Mitra Resmi DPC HPI Garut (Guide Berlisensi BNSP)"
-                className="w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs text-ink focus:border-forest focus:outline-none"
+                placeholder="Mitra Resmi DPC HPI Garut (Guide Berlisensi BNSP)..."
+                disabled={formData.hpiPartnershipEnabled === false}
+                className="w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs text-ink focus:border-forest focus:outline-none disabled:bg-zinc-100"
               />
             </div>
+          </div>
+
+          {/* Dokumen Tambahan Kustom */}
+          <div className="pt-4 border-t border-ink/10 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-display text-sm font-bold text-forest">
+                  Dokumen Legalitas Tambahan (NPWP, Domisili, CHSE, dll.)
+                </h4>
+                <p className="text-[0.7rem] text-ink/60">
+                  Tambahkan dokumen legalitas lain yang Anda miliki sebagai bukti keabsahan usaha.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const currentDocs = formData.customLegalDocs || []
+                  setFormData((prev) => ({
+                    ...prev,
+                    customLegalDocs: [
+                      ...currentDocs,
+                      {
+                        id: `doc-${Date.now()}`,
+                        title: 'NPWP Perusahaan / Surat Keterangan Domisili',
+                        number: 'Nomor Dokumen Resmi',
+                        enabled: true,
+                        status: 'aktif',
+                        notes: '',
+                      },
+                    ],
+                  }))
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-forest/10 hover:bg-forest text-forest hover:text-white px-3 py-1.5 text-xs font-bold transition"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Tambah Dokumen</span>
+              </button>
+            </div>
+
+            {formData.customLegalDocs && formData.customLegalDocs.length > 0 && (
+              <div className="space-y-3">
+                {formData.customLegalDocs.map((docItem, idx) => (
+                  <div key={docItem.id} className="rounded-2xl border border-ink/10 bg-white p-3.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <input
+                        type="text"
+                        value={docItem.title}
+                        onChange={(e) => {
+                          const updated = [...(formData.customLegalDocs || [])]
+                          updated[idx] = { ...updated[idx], title: e.target.value }
+                          setFormData((prev) => ({ ...prev, customLegalDocs: updated }))
+                        }}
+                        placeholder="Nama Dokumen (misal: NPWP Badan)"
+                        className="font-bold text-xs text-forest border-b border-dashed border-ink/20 pb-0.5 focus:outline-none"
+                      />
+                      <div className="flex items-center gap-3">
+                        <label className="flex items-center gap-1 text-[0.7rem] font-semibold cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={docItem.enabled}
+                            onChange={(e) => {
+                              const updated = [...(formData.customLegalDocs || [])]
+                              updated[idx] = { ...updated[idx], enabled: e.target.checked }
+                              setFormData((prev) => ({ ...prev, customLegalDocs: updated }))
+                            }}
+                            className="rounded text-forest focus:ring-forest"
+                          />
+                          <span>{docItem.enabled ? 'Aktif' : 'Nonaktif'}</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = (formData.customLegalDocs || []).filter((_, i) => i !== idx)
+                            setFormData((prev) => ({ ...prev, customLegalDocs: updated }))
+                          }}
+                          className="text-rose-500 hover:text-rose-700 p-1"
+                          title="Hapus dokumen ini"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <input
+                        type="text"
+                        value={docItem.number}
+                        onChange={(e) => {
+                          const updated = [...(formData.customLegalDocs || [])]
+                          updated[idx] = { ...updated[idx], number: e.target.value }
+                          setFormData((prev) => ({ ...prev, customLegalDocs: updated }))
+                        }}
+                        placeholder="Nomor Surat / Sertifikat..."
+                        className="rounded-lg border border-ink/15 px-3 py-1.5 text-xs font-mono font-bold text-ink"
+                      />
+                      <input
+                        type="text"
+                        value={docItem.notes || ''}
+                        onChange={(e) => {
+                          const updated = [...(formData.customLegalDocs || [])]
+                          updated[idx] = { ...updated[idx], notes: e.target.value }
+                          setFormData((prev) => ({ ...prev, customLegalDocs: updated }))
+                        }}
+                        placeholder="Catatan / Lembaga Penerbit (opsional)"
+                        className="rounded-lg border border-ink/15 px-3 py-1.5 text-xs text-ink/70"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

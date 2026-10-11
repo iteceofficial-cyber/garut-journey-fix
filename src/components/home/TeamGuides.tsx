@@ -9,24 +9,32 @@ import {
 } from 'lucide-react'
 import { Img } from '@/components/Img'
 import { Reveal, SectionHeading } from '@/components/Reveal'
-import { GUIDE_TEAM } from '@/data/team'
+import { useTeamGuides } from '@/lib/teamStorage'
+import { useSiteSettings } from '@/lib/siteSettings'
 import { whatsappLink } from '@/data/site'
 
 export function TeamGuides() {
+  const guides = useTeamGuides()
+  const { settings } = useSiteSettings()
 
   return (
     <section id="team" className="relative bg-cream py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <SectionHeading
-            eyebrow="Tim & Pramuwisata Lokal"
+            eyebrow={settings.teamEyebrow || 'Tim & Pramuwisata Lokal'}
             title={
-              <>
-                Dipandu Putra Daerah Berlisensi{' '}
-                <em className="text-forest">HPI &amp; BNSP</em>
-              </>
+              settings.teamTitle || (
+                <>
+                  Dipandu Putra Daerah Berlisensi{' '}
+                  <em className="text-forest">HPI &amp; BNSP</em>
+                </>
+              )
             }
-            intro="Bukan makelar atau pihak ketiga. Kami menjamin setiap perjalanan Anda didampingi oleh pemandu lokal resmi yang ramah, paham sejarah tatar Sunda, dan memprioritaskan keselamatan."
+            intro={
+              settings.teamIntro ||
+              'Bukan makelar atau pihak ketiga. Kami menjamin setiap perjalanan Anda didampingi oleh pemandu lokal resmi yang ramah, paham sejarah tatar Sunda, dan memprioritaskan keselamatan.'
+            }
           />
 
           <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-3 shadow-soft border border-forest/10 shrink-0">
@@ -40,7 +48,7 @@ export function TeamGuides() {
 
         {/* Guides Grid */}
         <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {GUIDE_TEAM.map((guide, idx) => (
+          {guides.map((guide, idx) => (
             <Reveal key={guide.id} delay={idx * 80}>
               <article className="group flex h-full flex-col overflow-hidden rounded-[2rem] bg-white shadow-soft border border-ink/5 transition duration-500 hover:-translate-y-1.5 hover:shadow-lift">
                 {/* Photo & Top Badges */}
