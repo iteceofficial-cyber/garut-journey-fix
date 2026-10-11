@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore'
 import { db, handleFirestoreError, logFirestoreError, OperationType } from '@/lib/firebase'
 
-export type PaymentStatus = 'Menunggu Konfirmasi' | 'Lunas' | 'Selesai' | 'Dibatalkan'
+export type PaymentStatus = 'Menunggu Konfirmasi' | 'DP 30%' | 'Lunas' | 'Selesai' | 'Dibatalkan'
 
 export type PaymentMethod =
   | 'QRIS'
@@ -19,6 +19,8 @@ export type PaymentMethod =
   | 'GoPay'
   | 'Dana'
   | 'OVO'
+
+export type PaymentType = 'full' | 'dp'
 
 export interface Booking {
   id: string // e.g. GJ-2610-8492
@@ -33,6 +35,10 @@ export interface Booking {
   travelers: number
   packageOrTour: string
   totalPrice: number
+  paymentType?: PaymentType // 'full' (100%) or 'dp' (Down Payment 30%)
+  dpPercentage?: number // e.g. 30
+  paidAmount?: number // Nominal yang dibayarkan saat ini (DP 30% atau Lunas 100%)
+  remainingAmount?: number // Sisa pelunasan (70% jika DP, 0 jika Lunas)
   paymentMethod: PaymentMethod
   paymentStatus: PaymentStatus
   notes?: string

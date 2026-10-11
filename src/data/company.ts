@@ -52,6 +52,10 @@ export interface CompanyProfileData {
     description: string
     iconName: string
   }[]
+  downPaymentPercentage?: number
+  enableDownPayment?: boolean
+  termsAndConditions: string[]
+  updatedAt?: string
 }
 
 export const COMPANY_PROFILE: CompanyProfileData = {
@@ -148,5 +152,16 @@ export const COMPANY_PROFILE: CompanyProfileData = {
         'Kwitansi resmi ber-QR Code, rincian biaya transparan sejak awal, dan jaminan tidak ada pemaksaan belanja toko oleh-oleh.',
       iconName: 'BadgeCheck',
     },
+  ],
+  downPaymentPercentage: 30,
+  enableDownPayment: true,
+  termsAndConditions: [
+    'Pemesanan paket wisata (booking) dinyatakan sah setelah peserta melakukan pembayaran Down Payment (DP) sebesar 30% dari total biaya trip atau pembayaran penuh (Full Payment 100%).',
+    'Sisa pelunasan sebesar 70% (bagi yang memilih opsi DP 30%) wajib dilunasi paling lambat H-1 sebelum keberangkatan atau saat penjemputan di titik kumpul (Meeting Point).',
+    'Perubahan jadwal keberangkatan (Reschedule) dapat diajukan maksimal H-3 sebelum tanggal trip tanpa biaya tambahan (selama kuota armada & pemandu tersedia).',
+    'Pembatalan sepihak oleh peserta kurang dari H-3 sebelum keberangkatan menyebabkan Down Payment (DP 30%) tidak dapat dikembalikan (non-refundable), namun dapat dialihkan ke peserta pengganti.',
+    'Seluruh tarif paket sudah termasuk fasilitas sesuai rincian yang tertera (transportasi AC, BBM, driver, pemandu resmi HPI, dan tiket objek wisata utama).',
+    'Peserta wajib mematuhi arahan keselamatan dari Tour Leader / Guide HPI, terutama saat eksplorasi kawasan vulkanik Kawah Papandayan, perairan danau, maupun pantai selatan.',
+    'Apabila terjadi kondisi Force Majeure (bencana alam, penutupan jalur resmi oleh pemerintah, atau cuaca ekstrem), jadwal atau rute destinasi akan disesuaikan demi keselamatan bersama.',
   ],
 }

@@ -101,6 +101,18 @@ export async function getPersistedMedia(id: string): Promise<string | null> {
  * If quota is exceeded, handles gracefully, maintains memory state,
  * and still triggers custom events so the UI updates seamlessly.
  */
+export function safeLocalStorageGet(key: string): string | null {
+  if (typeof window === 'undefined') return null
+  if (memoryCache.has(`ls:${key}`)) {
+    return memoryCache.get(`ls:${key}`) || null
+  }
+  try {
+    return window.localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
 export function safeLocalStorageSet(key: string, value: unknown, eventName?: string, eventDetail?: unknown): boolean {
   if (typeof window === 'undefined') return false
 
@@ -110,6 +122,10 @@ export function safeLocalStorageSet(key: string, value: unknown, eventName?: str
   } catch {
     return false
   }
+
+  // Always keep in memory cache & IndexedDB so quota limits never lose data
+  memoryCache.set(`ls:${key}`, serialized)
+  void persistMedia(`ls:${key}`, serialized)
 
   let saved = false
   try {
@@ -132,6 +148,7 @@ export function safeLocalStorageSet(key: string, value: unknown, eventName?: str
       saved = true
     } catch {
       // Continue with memory cache
+      saved = true
     }
   }
 

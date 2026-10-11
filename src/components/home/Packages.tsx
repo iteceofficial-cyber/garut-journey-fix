@@ -1,4 +1,4 @@
-import { BadgePercent, Check, Clock, Info, MapPin, ShieldCheck, Users } from 'lucide-react'
+import { BadgePercent, Check, Clock, MapPin, ShieldCheck, Users } from 'lucide-react'
 import { useState } from 'react'
 import { BookLink, btn } from '@/components/BookLink'
 import { Reveal, SectionHeading } from '@/components/Reveal'

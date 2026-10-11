@@ -797,9 +797,16 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            if (g.id) deleteGalleryItem(g.id)
-                            onNotify(`Foto "${g.title}" dihapus.`)
+                          onClick={async () => {
+                            try {
+                              await deleteGalleryItem(g.id || g.title, g.title)
+                              if (editingGalId && (editingGalId === g.id || galTitle === g.title)) {
+                                resetGalForm()
+                              }
+                              onNotify(`Berhasil: Foto "${g.title}" telah dihapus dari galeri website.`)
+                            } catch {
+                              onNotify(`Gagal menghapus foto "${g.title}". Silakan coba lagi.`)
+                            }
                           }}
                           className="rounded-lg bg-rose-50 px-2.5 py-1 text-[0.7rem] font-bold text-rose-700 hover:bg-rose-600 hover:text-white"
                         >

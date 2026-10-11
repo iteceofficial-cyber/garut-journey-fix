@@ -270,11 +270,20 @@ function generateVectorKwitansiPdf(booking: Booking, profile: CompanyProfileData
   drawRow('Telah Diterima Dari', booking.fullName, `${booking.whatsapp} • ${booking.email || '-'}`)
 
   // Row 2: Uang Sejumlah
-  const terbilang = angkaKeTerbilang(booking.totalPrice)
-  drawRow('Uang Sejumlah', formatRupiah(booking.totalPrice), `"${terbilang}"`, true)
+  const paidVal = booking.paidAmount || booking.totalPrice
+  const isDpBooking = booking.paymentType === 'dp' || booking.paymentStatus === 'DP 30%'
+  const terbilang = angkaKeTerbilang(paidVal)
+  const subTerbilang =
+    isDpBooking && (booking.remainingAmount || 0) > 0
+      ? `"${terbilang}" (DP ${booking.dpPercentage || 30}% dari Total ${formatRupiah(booking.totalPrice)} • Sisa: ${formatRupiah(booking.remainingAmount || 0)})`
+      : `"${terbilang}"`
+  drawRow('Uang Sejumlah', formatRupiah(paidVal), subTerbilang, true)
 
   // Row 3: Untuk Pembayaran
-  drawRow('Untuk Pembayaran', booking.packageOrTour, `Jumlah Peserta: ${booking.travelers} Orang`)
+  const schemeInfo = isDpBooking
+    ? `Peserta: ${booking.travelers} Orang • Skema: Down Payment (DP ${booking.dpPercentage || 30}%)`
+    : `Jumlah Peserta: ${booking.travelers} Orang • Skema: Pembayaran Lunas (100%)`
+  drawRow('Untuk Pembayaran', booking.packageOrTour, schemeInfo)
 
   // Row 4: Jadwal & Titik Kumpul
   const tripDate = booking.travelDate || booking.arrivalDate || 'Sesuai Konfirmasi'
@@ -617,8 +626,10 @@ function generateVectorKwitansiPdf(booking: Booking, profile: CompanyProfileData
     month: 'long',
     year: 'numeric',
   })
-  const terbilangRupiah = angkaKeTerbilang(booking.totalPrice)
-  const isPaid = booking.paymentStatus === 'Lunas' || booking.paymentStatus === 'Selesai'
+  const activePaidAmount = booking.paidAmount || booking.totalPrice
+  const isDpPayment = booking.paymentType === 'dp' || booking.paymentStatus === 'DP 30%'
+  const terbilangRupiah = angkaKeTerbilang(activePaidAmount)
+  const isPaid = booking.paymentStatus === 'Lunas' || booking.paymentStatus === 'Selesai' || booking.paymentStatus === 'DP 30%'
 
   return (
     <div className="min-h-screen bg-cream py-6 sm:py-10 px-3 sm:px-6 relative">
@@ -865,12 +876,26 @@ function generateVectorKwitansiPdf(booking: Booking, profile: CompanyProfileData
             <div className="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-1 sm:gap-4 items-baseline border-b border-ink/5 pb-3">
               <span className="text-xs font-bold uppercase tracking-wider text-ink/50">Uang Sejumlah</span>
               <div>
-                <p className="font-display text-2xl font-bold text-forest">
-                  {formatRupiah(booking.totalPrice)}
-                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-display text-2xl font-bold text-forest">
+                    {formatRupiah(activePaidAmount)}
+                  </p>
+                  {isDpPayment && (
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[0.7rem] font-bold text-amber-800">
+                      Down Payment (DP {booking.dpPercentage || 30}%)
+                    </span>
+                  )}
+                </div>
                 <div className="mt-1 rounded-xl bg-cream px-3 py-1.5 border border-ink/5 text-xs font-semibold italic text-ink/80">
                   &ldquo;{terbilangRupiah}&rdquo;
                 </div>
+                {isDpPayment && (booking.remainingAmount || 0) > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-ink/70">
+                    <span>Total Biaya Trip: <strong className="text-ink">{formatRupiah(booking.totalPrice)}</strong></span>
+                    <span>&bull;</span>
+                    <span>Sisa Pelunasan: <strong className="text-ember">{formatRupiah(booking.remainingAmount || 0)}</strong></span>
+                  </div>
+                )}
               </div>
             </div>
 

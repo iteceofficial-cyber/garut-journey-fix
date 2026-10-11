@@ -24,7 +24,7 @@ export interface GeneratedOrganicSeo {
  * Organic travel copywriting corpus for fallback / offline generation.
  * Specially written in natural, fluent Indonesian with genuine warmth.
  */
-const ORGANIC_TITLES = {
+export const ORGANIC_TITLES = {
   site: [
     'Garut Journey — Jelajahi Swiss van Java, Destinasi & Paket Tour Resmi',
     'Wisata Garut Terbaik — Paket Liburan Keluarga & Trip Alam Swiss van Java',

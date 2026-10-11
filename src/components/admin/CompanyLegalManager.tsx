@@ -16,7 +16,7 @@ import {
 import { useCompanyProfile, type CompanyProfileData } from '@/lib/companyStorage'
 import { COMPANY_PROFILE } from '@/data/company'
 
-export function CompanyLegalManager() {
+export function CompanyLegalManager({ onNotify }: { onNotify?: (msg: string, isError?: boolean) => void }) {
   const { profile, saveCompanyProfile, loading } = useCompanyProfile()
   const [formData, setFormData] = useState<CompanyProfileData>(profile)
   const [savedSuccess, setSavedSuccess] = useState(false)
@@ -91,26 +91,54 @@ export function CompanyLegalManager() {
     setFormData((prev) => ({ ...prev, mission: list }))
   }
 
+  // Terms & Conditions list
+  const handleTermChange = (index: number, text: string) => {
+    const list = [...(formData.termsAndConditions || [])]
+    list[index] = text
+    setFormData((prev) => ({ ...prev, termsAndConditions: list }))
+  }
+
+  const handleAddTerm = () => {
+    setFormData((prev) => ({
+      ...prev,
+      termsAndConditions: [
+        ...(prev.termsAndConditions || []),
+        'Ketentuan perjalanan baru (silakan sesuaikan isi syarat & ketentuan)...',
+      ],
+    }))
+  }
+
+  const handleRemoveTerm = (index: number) => {
+    const list = (formData.termsAndConditions || []).filter((_, i) => i !== index)
+    setFormData((prev) => ({ ...prev, termsAndConditions: list }))
+  }
+
   // Submit save
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMsg('')
     try {
-      await saveCompanyProfile(formData)
-      setSavedSuccess(true)
-      setTimeout(() => setSavedSuccess(false), 4000)
-    } catch (err) {
+      const ok = await saveCompanyProfile(formData)
+      if (ok) {
+        setSavedSuccess(true)
+        onNotify?.('Berhasil! Dokumen Legalitas, Pengaturan DP, dan Syarat & Ketentuan Trip telah disimpan.')
+        setTimeout(() => setSavedSuccess(false), 4000)
+      } else {
+        setErrorMsg('Gagal menyimpan dokumen legalitas perusahaan.')
+        onNotify?.('Gagal menyimpan dokumen legalitas dan syarat ketentuan trip.', true)
+      }
+    } catch {
       setErrorMsg('Gagal menyimpan dokumen legalitas perusahaan ke Firestore.')
+      onNotify?.('Gagal menyimpan dokumen legalitas dan syarat ketentuan trip.', true)
     }
   }
 
   const handleResetToDefault = () => {
-    if (window.confirm('Kembalikan seluruh data legalitas ke format default awal?')) {
-      setFormData(COMPANY_PROFILE)
-      saveCompanyProfile(COMPANY_PROFILE)
-      setSavedSuccess(true)
-      setTimeout(() => setSavedSuccess(false), 3000)
-    }
+    setFormData(COMPANY_PROFILE)
+    void saveCompanyProfile(COMPANY_PROFILE)
+    setSavedSuccess(true)
+    onNotify?.('Berhasil! Data legalitas dan Syarat & Ketentuan Trip dikembalikan ke default.')
+    setTimeout(() => setSavedSuccess(false), 3000)
   }
 
   return (
@@ -808,6 +836,99 @@ export function CompanyLegalManager() {
               <Plus className="h-3.5 w-3.5" />
               <span>Tambah Misi</span>
             </button>
+          </div>
+        </div>
+
+        {/* Section 6: Pengaturan Down Payment (DP 30%) & Syarat Ketentuan Trip */}
+        <div className="rounded-3xl bg-white p-6 sm:p-8 shadow-soft border border-ink/5 space-y-6">
+          <div className="border-b border-ink/10 pb-4 flex items-center justify-between">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-widest text-ember">
+                06 &bull; Down Payment (DP) &amp; Syarat Ketentuan Trip
+              </span>
+              <h3 className="font-display text-xl font-semibold text-forest mt-1">
+                Kelola Kebijakan Down Payment (DP 30%) &amp; Syarat Ketentuan Perjalanan
+              </h3>
+              <p className="text-xs text-ink/65 mt-1">
+                Atur persentase Down Payment (default 30% dari total trip) serta daftar butir Syarat &amp; Ketentuan yang tampil di formulir booking, modal paket wisata, dan halaman pembayaran.
+              </p>
+            </div>
+            <FileCheck className="h-6 w-6 text-ember shrink-0" />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 rounded-2xl bg-cream/30 p-4 border border-ink/10">
+            <div>
+              <label className="flex items-center gap-2.5 text-xs font-bold text-forest cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.enableDownPayment !== false}
+                  onChange={(e) => handleFieldChange('enableDownPayment', e.target.checked)}
+                  className="h-4 w-4 rounded text-forest focus:ring-forest"
+                />
+                <span>Aktifkan Fitur Pembayaran Down Payment (DP)</span>
+              </label>
+              <p className="mt-1 text-[0.7rem] text-ink/60 pl-6">
+                Jika aktif, pelanggan dapat memilih membayar DP (misal 30%) atau Bayar Lunas (100%) saat checkout.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                Persentase Down Payment (% dari Total Trip)
+              </label>
+              <div className="mt-1.5 flex items-center gap-2">
+                <input
+                  type="number"
+                  min={10}
+                  max={90}
+                  value={formData.downPaymentPercentage ?? 30}
+                  onChange={(e) => handleFieldChange('downPaymentPercentage', Math.max(10, Math.min(90, Number(e.target.value) || 30)))}
+                  disabled={formData.enableDownPayment === false}
+                  className="w-28 rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs font-bold text-ember focus:border-forest focus:outline-none disabled:bg-zinc-100"
+                />
+                <span className="text-xs font-semibold text-ink/70">% dari total biaya trip (Standar: 30%)</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                Daftar Poin Syarat &amp; Ketentuan Trip ({(formData.termsAndConditions || []).length} Poin):
+              </label>
+              <button
+                type="button"
+                onClick={handleAddTerm}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-forest/10 hover:bg-forest text-forest hover:text-white px-3 py-1.5 text-xs font-bold transition"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Tambah Poin S&amp;K</span>
+              </button>
+            </div>
+
+            <div className="space-y-2.5">
+              {(formData.termsAndConditions || []).map((term, idx) => (
+                <div key={idx} className="flex items-start gap-2">
+                  <span className="mt-2 grid h-6 w-6 place-items-center rounded-full bg-ember text-[0.65rem] font-bold text-white shrink-0">
+                    {idx + 1}
+                  </span>
+                  <textarea
+                    rows={2}
+                    value={term}
+                    onChange={(e) => handleTermChange(idx, e.target.value)}
+                    className="flex-1 rounded-xl border border-ink/15 bg-white p-2.5 text-xs text-ink focus:border-forest focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTerm(idx)}
+                    className="mt-1.5 p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition"
+                    title="Hapus poin syarat & ketentuan ini"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

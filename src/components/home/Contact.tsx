@@ -1,9 +1,14 @@
 import {
+  BadgePercent,
   Calendar,
+  ChevronDown,
+  ChevronUp,
   Clock,
   CreditCard,
+  FileText,
   Mail,
   MapPin,
+  ShieldCheck,
   Users,
 } from 'lucide-react'
 import { useState, type FormEvent, useEffect } from 'react'
@@ -17,7 +22,9 @@ import { useTourPrices } from '@/lib/destinationsStorage'
 import { useCityTours, useTourPackages } from '@/lib/toursStorage'
 import { useLanguage } from '@/lib/i18n'
 import { useSiteSettings } from '@/lib/siteSettings'
+import { useCompanyProfile } from '@/lib/companyStorage'
 import { calculatePriceForPax } from '@/data/tours'
+import type { PaymentType } from '@/lib/bookingsStorage'
 
 const MEETING_POINTS = [
   'Stasiun Kereta Api Garut (KAI)',
@@ -44,6 +51,10 @@ function InquiryForm() {
   const cityTours = useCityTours()
   const packages = useTourPackages()
   const { t } = useLanguage()
+  const { profile } = useCompanyProfile()
+  const dpPct = profile.downPaymentPercentage ?? 30
+  const dpEnabled = profile.enableDownPayment !== false
+  const termsList = profile.termsAndConditions || []
 
   const tourOptions = Array.from(
     new Set([
@@ -56,6 +67,8 @@ function InquiryForm() {
   const [plan, setPlan] = useState('')
   const [state, setState] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentType, setPaymentType] = useState<PaymentType>('dp')
+  const [showTerms, setShowTerms] = useState(false)
 
   // Form states
   const today = new Date().toISOString().split('T')[0]
@@ -80,6 +93,7 @@ function InquiryForm() {
     travelers: number
     packageOrTour: string
     totalPrice: number
+    paymentType?: PaymentType
     notes?: string
   } | null>(null)
 
@@ -96,6 +110,7 @@ function InquiryForm() {
   const basePrice = prices[currentTourName] || 350000
   const count = Math.max(1, Math.min(100, travelers || 1))
   const calculatedPricing = calculatePriceForPax(matchedTourObj?.priceTiers, count, basePrice)
+  const dpEstimate = Math.round((calculatedPricing.totalPrice * dpPct) / 100)
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -125,6 +140,7 @@ function InquiryForm() {
       travelers: count,
       packageOrTour: preferredTour,
       totalPrice: finalCalc.totalPrice,
+      paymentType: dpEnabled ? paymentType : 'full',
       notes: message,
     })
 
@@ -236,8 +252,13 @@ function InquiryForm() {
               onChange={(e) => setTravelers(Number(e.target.value) || 1)}
               className={field}
             />
-            <div className="mt-1 flex items-center justify-between text-[0.7rem] text-ink/60">
-              <span>Total Estimasi: <strong className="text-forest font-bold">Rp {calculatedPricing.totalPrice.toLocaleString('id-ID')}</strong></span>
+            <div className="mt-1.5 flex flex-wrap items-center justify-between gap-1 text-[0.7rem] text-ink/60">
+              <span>
+                Total: <strong className="text-forest font-bold">Rp {calculatedPricing.totalPrice.toLocaleString('id-ID')}</strong>
+                {dpEnabled && (
+                  <> &bull; DP {dpPct}%: <strong className="text-ember font-bold">Rp {dpEstimate.toLocaleString('id-ID')}</strong></>
+                )}
+              </span>
               {travelers > 5 && (
                 <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full">
                   Diskon Rombongan Aktif
@@ -291,6 +312,63 @@ function InquiryForm() {
             </div>
           )}
 
+          {/* Skema Pembayaran (DP 30% / Lunas 100%) */}
+          {dpEnabled && (
+            <div className="sm:col-span-2 rounded-2xl bg-cream/60 p-4 border border-ink/10 space-y-2.5">
+              <span className={labelCls}>
+                <BadgePercent className="h-3.5 w-3.5 text-ember" />
+                <span>Pilih Skema Pembayaran (Tersedia Down Payment {dpPct}%)</span>
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setPaymentType('dp')}
+                  className={`rounded-xl p-3 text-left border transition ${
+                    paymentType === 'dp'
+                      ? 'border-ember bg-white ring-2 ring-ember shadow-sm'
+                      : 'border-ink/10 bg-white/60 hover:bg-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-forest">Down Payment (DP {dpPct}%)</span>
+                    <span className="rounded-full bg-ember px-2 py-0.5 text-[0.6rem] font-bold text-white uppercase">
+                      DP {dpPct}%
+                    </span>
+                  </div>
+                  <p className="font-display text-base font-bold text-ember mt-1">
+                    Rp {dpEstimate.toLocaleString('id-ID')}
+                  </p>
+                  <p className="text-[0.68rem] text-ink/60">
+                    Sisa Rp {(calculatedPricing.totalPrice - dpEstimate).toLocaleString('id-ID')} dilunasi H-1 / saat penjemputan
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPaymentType('full')}
+                  className={`rounded-xl p-3 text-left border transition ${
+                    paymentType === 'full'
+                      ? 'border-forest bg-white ring-2 ring-forest shadow-sm'
+                      : 'border-ink/10 bg-white/60 hover:bg-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-forest">Bayar Lunas (100%)</span>
+                    <span className="rounded-full bg-forest/15 px-2 py-0.5 text-[0.6rem] font-bold text-forest uppercase">
+                      Full Payment
+                    </span>
+                  </div>
+                  <p className="font-display text-base font-bold text-forest mt-1">
+                    Rp {calculatedPricing.totalPrice.toLocaleString('id-ID')}
+                  </p>
+                  <p className="text-[0.68rem] text-ink/60">
+                    Langsung lunas tanpa sisa tagihan saat keberangkatan
+                  </p>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Notes */}
           <label className="sm:col-span-2">
             <span className={labelCls}>{t.booking.notes}</span>
@@ -301,6 +379,38 @@ function InquiryForm() {
               placeholder={t.booking.notesPlaceholder}
             />
           </label>
+
+          {/* Syarat & Ketentuan Trip */}
+          {termsList.length > 0 && (
+            <div className="sm:col-span-2 rounded-2xl border border-ink/10 bg-cream/40 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-forest">
+                  <FileText className="h-3.5 w-3.5 text-ember" />
+                  <span>Syarat &amp; Ketentuan Trip Garut Journey</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowTerms((v) => !v)}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-ember hover:underline"
+                >
+                  <span>{showTerms ? 'Tutup S&K' : 'Lihat S&K Trip'}</span>
+                  {showTerms ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+              {showTerms ? (
+                <ol className="list-decimal pl-4 space-y-1.5 text-xs text-ink/75 leading-relaxed pt-1">
+                  {termsList.map((item, idx) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="text-[0.7rem] text-ink/60 flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-forest shrink-0" />
+                  <span>Booking dapat diamankan dengan DP {dpPct}% atau Full Payment sesuai ketentuan resmi perjalanan.</span>
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <button

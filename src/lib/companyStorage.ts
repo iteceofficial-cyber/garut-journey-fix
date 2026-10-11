@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { doc, setDoc, onSnapshot } from 'firebase/firestore'
 import { db, logFirestoreError, OperationType } from '@/lib/firebase'
 import { COMPANY_PROFILE, type CompanyProfileData } from '@/data/company'
-import { safeLocalStorageSet } from '@/lib/mediaStorage'
+import { safeLocalStorageGet, safeLocalStorageSet } from '@/lib/mediaStorage'
 
 const COMPANY_PROFILE_KEY = 'garut_journey_company_profile_v1'
 const COMPANY_PROFILE_EVENT = 'garut_company_profile_updated'
@@ -12,7 +12,7 @@ export type { CompanyProfileData }
 export function getStoredCompanyProfile(): CompanyProfileData {
   if (typeof window === 'undefined') return COMPANY_PROFILE
   try {
-    const raw = localStorage.getItem(COMPANY_PROFILE_KEY)
+    const raw = safeLocalStorageGet(COMPANY_PROFILE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
       return {
@@ -34,6 +34,17 @@ export function getStoredCompanyProfile(): CompanyProfileData {
         customLegalDocs: parsed.customLegalDocs && Array.isArray(parsed.customLegalDocs)
           ? parsed.customLegalDocs
           : COMPANY_PROFILE.customLegalDocs,
+        termsAndConditions: parsed.termsAndConditions && Array.isArray(parsed.termsAndConditions)
+          ? parsed.termsAndConditions
+          : COMPANY_PROFILE.termsAndConditions,
+        downPaymentPercentage:
+          typeof parsed.downPaymentPercentage === 'number'
+            ? parsed.downPaymentPercentage
+            : COMPANY_PROFILE.downPaymentPercentage ?? 30,
+        enableDownPayment:
+          typeof parsed.enableDownPayment === 'boolean'
+            ? parsed.enableDownPayment
+            : COMPANY_PROFILE.enableDownPayment ?? true,
       }
     }
   } catch (err) {
@@ -60,15 +71,22 @@ export async function saveCompanyProfile(profileUpdates: Partial<CompanyProfileD
     mission: profileUpdates.mission || current.mission,
     pillars: profileUpdates.pillars || current.pillars,
     customLegalDocs: profileUpdates.customLegalDocs || current.customLegalDocs,
+    termsAndConditions: profileUpdates.termsAndConditions || current.termsAndConditions,
+    downPaymentPercentage:
+      typeof profileUpdates.downPaymentPercentage === 'number'
+        ? profileUpdates.downPaymentPercentage
+        : current.downPaymentPercentage ?? 30,
+    enableDownPayment:
+      typeof profileUpdates.enableDownPayment === 'boolean'
+        ? profileUpdates.enableDownPayment
+        : current.enableDownPayment ?? true,
+    updatedAt: new Date().toISOString(),
   }
 
   saveLocalCompanyProfile(updated)
 
   try {
-    await setDoc(doc(db, 'settings', 'companyProfile'), {
-      ...updated,
-      updatedAt: new Date().toISOString(),
-    })
+    await setDoc(doc(db, 'settings', 'companyProfile'), updated)
     return true
   } catch (err) {
     logFirestoreError(err, OperationType.WRITE, 'settings/companyProfile')
@@ -77,7 +95,7 @@ export async function saveCompanyProfile(profileUpdates: Partial<CompanyProfileD
 }
 
 export function useCompanyProfile() {
-  const [profile, setProfile] = useState<CompanyProfileData>(COMPANY_PROFILE)
+  const [profile, setProfile] = useState<CompanyProfileData>(() => getStoredCompanyProfile())
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -86,7 +104,14 @@ export function useCompanyProfile() {
     // Synchronize client-stored company profile after hydration
     setProfile(getStoredCompanyProfile())
 
-    const handler = () => setProfile(getStoredCompanyProfile())
+    const handler = (e: Event) => {
+      const customEvt = e as CustomEvent<CompanyProfileData>
+      if (customEvt?.detail) {
+        setProfile(customEvt.detail)
+      } else {
+        setProfile(getStoredCompanyProfile())
+      }
+    }
     window.addEventListener(COMPANY_PROFILE_EVENT, handler)
     window.addEventListener('storage', handler)
 
@@ -95,6 +120,14 @@ export function useCompanyProfile() {
       (docSnap) => {
         if (docSnap.exists()) {
           const remote = docSnap.data() as Partial<CompanyProfileData>
+          const local = getStoredCompanyProfile()
+          if (
+            local.updatedAt &&
+            (!remote.updatedAt || new Date(local.updatedAt).getTime() > new Date(remote.updatedAt).getTime())
+          ) {
+            setProfile(local)
+            return
+          }
           const merged: CompanyProfileData = {
             ...COMPANY_PROFILE,
             ...remote,
@@ -111,6 +144,20 @@ export function useCompanyProfile() {
             pillars: remote.pillars && Array.isArray(remote.pillars)
               ? remote.pillars
               : COMPANY_PROFILE.pillars,
+            customLegalDocs: remote.customLegalDocs && Array.isArray(remote.customLegalDocs)
+              ? remote.customLegalDocs
+              : COMPANY_PROFILE.customLegalDocs,
+            termsAndConditions: remote.termsAndConditions && Array.isArray(remote.termsAndConditions)
+              ? remote.termsAndConditions
+              : COMPANY_PROFILE.termsAndConditions,
+            downPaymentPercentage:
+              typeof remote.downPaymentPercentage === 'number'
+                ? remote.downPaymentPercentage
+                : COMPANY_PROFILE.downPaymentPercentage ?? 30,
+            enableDownPayment:
+              typeof remote.enableDownPayment === 'boolean'
+                ? remote.enableDownPayment
+                : COMPANY_PROFILE.enableDownPayment ?? true,
           }
           setProfile(merged)
           saveLocalCompanyProfile(merged)

@@ -1,19 +1,31 @@
 import { useState } from 'react'
 import {
+  BadgePercent,
   Calendar,
   Check,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Clock,
   Copy,
   CreditCard,
+  FileText,
   MessageCircle,
   QrCode,
+  ShieldCheck,
   Smartphone,
   X,
 } from 'lucide-react'
 import { site, whatsappLink } from '@/data/site'
-import { formatRupiah, saveBooking, type Booking, type PaymentMethod } from '@/lib/bookingsStorage'
+import {
+  formatRupiah,
+  saveBooking,
+  type Booking,
+  type PaymentMethod,
+  type PaymentType,
+} from '@/lib/bookingsStorage'
 import { usePaymentSettings } from '@/lib/paymentSettings'
+import { useCompanyProfile } from '@/lib/companyStorage'
 
 interface PaymentModalProps {
   isOpen: boolean
@@ -29,6 +41,7 @@ interface PaymentModalProps {
     travelers: number
     packageOrTour: string
     totalPrice: number
+    paymentType?: PaymentType
     notes?: string
   }
   onSuccess?: (booking: Booking) => void
@@ -36,12 +49,28 @@ interface PaymentModalProps {
 
 export function PaymentModal({ isOpen, onClose, bookingData, onSuccess }: PaymentModalProps) {
   const { config } = usePaymentSettings()
+  const { profile } = useCompanyProfile()
+  const dpPct = profile.downPaymentPercentage ?? 30
+  const dpEnabled = profile.enableDownPayment !== false
+  const termsList = profile.termsAndConditions || []
+
+  const [paymentType, setPaymentType] = useState<PaymentType>(
+    bookingData.paymentType || (dpEnabled ? 'dp' : 'full')
+  )
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('QRIS')
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const [agreedTerms, setAgreedTerms] = useState(true)
+  const [showTermsDetail, setShowTermsDetail] = useState(false)
+  const [termsError, setTermsError] = useState('')
   const [isCompleted, setIsCompleted] = useState(false)
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null)
 
   if (!isOpen) return null
+
+  const totalTripPrice = bookingData.totalPrice || 700000
+  const dpAmount = Math.round((totalTripPrice * dpPct) / 100)
+  const activePayAmount = paymentType === 'dp' ? dpAmount : totalTripPrice
+  const remainingAmount = paymentType === 'dp' ? Math.max(0, totalTripPrice - dpAmount) : 0
 
   // Generate unique booking code
   const bookingCode =
@@ -57,9 +86,22 @@ export function PaymentModal({ isOpen, onClose, bookingData, onSuccess }: Paymen
   }
 
   const handleConfirmPayment = () => {
+    if (!agreedTerms) {
+      setTermsError('Mohon centang persetujuan Syarat & Ketentuan Trip terlebih dahulu sebelum melanjutkan.')
+      return
+    }
+    setTermsError('')
+
     const arrival = bookingData.arrivalDate || new Date().toISOString().split('T')[0]
     const mTime = bookingData.meetingTime || '08:00 WIB'
     const mPoint = bookingData.meetingPoint || 'Stasiun Kereta Api Garut (KAI)'
+
+    const schemeNote =
+      paymentType === 'dp'
+        ? `[Skema: Down Payment DP ${dpPct}% = ${formatRupiah(activePayAmount)} | Sisa Pelunasan: ${formatRupiah(remainingAmount)}]`
+        : `[Skema: Pembayaran Lunas 100% = ${formatRupiah(totalTripPrice)}]`
+
+    const combinedNotes = [bookingData.notes?.trim(), schemeNote].filter(Boolean).join(' • ')
 
     const newBooking: Booking = {
       id: bookingCode,
@@ -73,19 +115,28 @@ export function PaymentModal({ isOpen, onClose, bookingData, onSuccess }: Paymen
       meetingPoint: mPoint,
       travelers: bookingData.travelers || 2,
       packageOrTour: bookingData.packageOrTour || 'Garut One-Day City Tour',
-      totalPrice: bookingData.totalPrice || 700000,
+      totalPrice: totalTripPrice,
+      paymentType,
+      dpPercentage: paymentType === 'dp' ? dpPct : 100,
+      paidAmount: activePayAmount,
+      remainingAmount,
       paymentMethod: selectedMethod,
       paymentStatus: 'Menunggu Konfirmasi',
-      notes: bookingData.notes || '',
+      notes: combinedNotes,
     }
 
-    // Save to localStorage -> enters Admin Dashboard
+    // Save to localStorage & Firestore -> enters Admin Dashboard
     saveBooking(newBooking)
     setCreatedBooking(newBooking)
     setIsCompleted(true)
     onSuccess?.(newBooking)
 
-    // Build WhatsApp Confirmation Message with Arrival Date & Meeting Point
+    // Build WhatsApp Confirmation Message with Down Payment / Full Payment details
+    const paymentSchemeLabel =
+      paymentType === 'dp'
+        ? `Down Payment (DP ${dpPct}%)`
+        : 'Pembayaran Penuh (Lunas 100%)'
+
     const message = `Halo Admin Garut Journey!
 
 Saya sudah melakukan pembayaran untuk pemesanan tour:
@@ -96,9 +147,14 @@ Saya sudah melakukan pembayaran untuk pemesanan tour:
 • Tanggal Kedatangan: *${newBooking.arrivalDate}*
 • Jam Pertemuan: *${newBooking.meetingTime}*
 • Titik Kumpul (Meeting Point): *${newBooking.meetingPoint}*
-• Jumlah: ${newBooking.travelers} Orang
-• Total Bayar: *${formatRupiah(newBooking.totalPrice)}*
-• Metode: ${newBooking.paymentMethod}
+• Jumlah Peserta: ${newBooking.travelers} Orang
+• Total Biaya Trip: *${formatRupiah(totalTripPrice)}*
+• Jenis Pembayaran: *${paymentSchemeLabel}*
+• Nominal Dibayar Sekarang: *${formatRupiah(activePayAmount)}*${
+      remainingAmount > 0 ? `\n• Sisa Pelunasan (${100 - dpPct}%): *${formatRupiah(remainingAmount)}*` : ''
+    }
+• Metode Pembayaran: ${newBooking.paymentMethod}
+• Syarat & Ketentuan Trip: *Telah Disetujui*
 
 Berikut saya kirimkan bukti transfer pembayaran. Mohon segera diverifikasi dan dicatat di dashboard. Terima kasih!`
 
@@ -176,12 +232,99 @@ Berikut saya kirimkan bukti transfer pembayaran. Mohon segera diverifikasi dan d
                 </span>
               </div>
               <div className="border-t border-ink/10 pt-2 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-ink/75">Total Pembayaran</span>
-                <span className="font-display text-xl font-bold text-ember">
-                  {formatRupiah(bookingData.totalPrice)}
+                <span className="text-xs font-bold uppercase tracking-wider text-ink/75">Total Biaya Trip (100%)</span>
+                <span className="font-display text-base font-bold text-ink">
+                  {formatRupiah(totalTripPrice)}
                 </span>
               </div>
+              {paymentType === 'dp' && (
+                <div className="rounded-xl bg-amber-50 border border-amber-200/80 p-2.5 flex items-center justify-between">
+                  <div>
+                    <span className="text-[0.7rem] font-bold uppercase tracking-wider text-amber-900 block">
+                      Tagihan Down Payment (DP {dpPct}%)
+                    </span>
+                    <span className="text-[0.65rem] text-amber-800">
+                      Sisa pelunasan {100 - dpPct}%: <strong>{formatRupiah(remainingAmount)}</strong> (H-1 / Meeting Point)
+                    </span>
+                  </div>
+                  <span className="font-display text-lg font-bold text-ember">
+                    {formatRupiah(activePayAmount)}
+                  </span>
+                </div>
+              )}
+              {paymentType === 'full' && (
+                <div className="rounded-xl bg-emerald-50 border border-emerald-200/80 p-2.5 flex items-center justify-between">
+                  <span className="text-[0.7rem] font-bold uppercase tracking-wider text-emerald-900">
+                    Tagihan Pembayaran Lunas (100%)
+                  </span>
+                  <span className="font-display text-lg font-bold text-forest">
+                    {formatRupiah(activePayAmount)}
+                  </span>
+                </div>
+              )}
             </div>
+
+            {/* Down Payment (30%) vs Full Payment (100%) Selector */}
+            {dpEnabled && (
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink/70 mb-2.5">
+                  Pilih Skema Pembayaran Trip
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentType('dp')}
+                    className={`rounded-2xl p-3.5 text-left border transition flex flex-col justify-between ${
+                      paymentType === 'dp'
+                        ? 'border-ember bg-ember/10 text-ink shadow-sm ring-2 ring-ember'
+                        : 'border-ink/15 bg-white text-ink/75 hover:bg-cream/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-forest">
+                        <BadgePercent className="h-4 w-4 text-ember" />
+                        <span>Down Payment (DP {dpPct}%)</span>
+                      </span>
+                      <span className="rounded-full bg-ember px-2 py-0.5 text-[0.6rem] font-bold uppercase text-white">
+                        Populer
+                      </span>
+                    </div>
+                    <p className="font-display text-lg font-bold text-ember mt-1.5">
+                      {formatRupiah(dpAmount)}
+                    </p>
+                    <p className="text-[0.68rem] text-ink/60 mt-0.5">
+                      Amankan jadwal sekarang, sisa {formatRupiah(remainingAmount)} dilunasi H-1 / saat penjemputan.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentType('full')}
+                    className={`rounded-2xl p-3.5 text-left border transition flex flex-col justify-between ${
+                      paymentType === 'full'
+                        ? 'border-forest bg-forest/10 text-ink shadow-sm ring-2 ring-forest'
+                        : 'border-ink/15 bg-white text-ink/75 hover:bg-cream/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-forest">
+                        <ShieldCheck className="h-4 w-4 text-forest" />
+                        <span>Bayar Lunas (100%)</span>
+                      </span>
+                      <span className="rounded-full bg-forest/15 px-2 py-0.5 text-[0.6rem] font-bold uppercase text-forest">
+                        Full Payment
+                      </span>
+                    </div>
+                    <p className="font-display text-lg font-bold text-forest mt-1.5">
+                      {formatRupiah(totalTripPrice)}
+                    </p>
+                    <p className="text-[0.68rem] text-ink/60 mt-0.5">
+                      Pembayaran penuh 100% di awal tanpa sisa tagihan saat keberangkatan.
+                    </p>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Payment Method Selector */}
             <div>
@@ -384,12 +527,21 @@ Berikut saya kirimkan bukti transfer pembayaran. Mohon segera diverifikasi dan d
               {/* Amount to transfer copyable */}
               <div className="flex items-center justify-between border-t border-ink/10 pt-3 text-xs">
                 <div>
-                  <span className="text-ink/60">Nominal Transfer:</span>
-                  <p className="font-mono font-bold text-sm text-ember">{formatRupiah(bookingData.totalPrice)}</p>
+                  <span className="text-ink/60">
+                    {paymentType === 'dp'
+                      ? `Nominal Transfer Saat Ini (DP ${dpPct}%):`
+                      : 'Nominal Transfer Saat Ini (Lunas 100%):'}
+                  </span>
+                  <p className="font-mono font-bold text-base text-ember">{formatRupiah(activePayAmount)}</p>
+                  {paymentType === 'dp' && (
+                    <span className="text-[0.68rem] text-ink/55">
+                      Total Trip: {formatRupiah(totalTripPrice)} &bull; Sisa Pelunasan: {formatRupiah(remainingAmount)}
+                    </span>
+                  )}
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleCopy(String(bookingData.totalPrice), 'nominal')}
+                  onClick={() => handleCopy(String(activePayAmount), 'nominal')}
                   className="inline-flex items-center gap-1 rounded-lg bg-ink/5 px-2.5 py-1 text-xs font-semibold text-ink/75 hover:bg-ink/10 transition"
                 >
                   {copiedField === 'nominal' ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
@@ -398,11 +550,63 @@ Berikut saya kirimkan bukti transfer pembayaran. Mohon segera diverifikasi dan d
               </div>
             </div>
 
+            {/* Syarat & Ketentuan Trip (Editable by Admin) */}
+            {termsList.length > 0 && (
+              <div className="rounded-2xl border border-ink/15 bg-cream/40 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-forest">
+                    <FileText className="h-4 w-4 text-ember" />
+                    <span>Syarat &amp; Ketentuan Trip Garut Journey</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowTermsDetail((v) => !v)}
+                    className="inline-flex items-center gap-1 text-[0.7rem] font-bold text-ember hover:underline"
+                  >
+                    <span>{showTermsDetail ? 'Sembunyikan' : 'Baca Lengkap'}</span>
+                    {showTermsDetail ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+
+                {showTermsDetail ? (
+                  <ol className="list-decimal pl-4 space-y-1.5 text-[0.72rem] text-ink/75 leading-relaxed max-h-40 overflow-y-auto pr-1">
+                    {termsList.map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="text-[0.7rem] text-ink/65 line-clamp-2">
+                    1. {termsList[0]} {termsList[1] ? `2. ${termsList[1]}` : ''}
+                  </p>
+                )}
+
+                <label className="flex items-start gap-2.5 pt-2 border-t border-ink/10 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={agreedTerms}
+                    onChange={(e) => {
+                      setAgreedTerms(e.target.checked)
+                      if (e.target.checked) setTermsError('')
+                    }}
+                    className="mt-0.5 h-4 w-4 rounded text-forest focus:ring-forest"
+                  />
+                  <span className="text-xs font-medium text-ink/85">
+                    Saya telah membaca dan menyetujui <strong>Syarat &amp; Ketentuan Trip</strong> serta kebijakan pembayaran{' '}
+                    {paymentType === 'dp' ? `Down Payment (DP ${dpPct}%)` : 'Full Payment (100%)'}.
+                  </span>
+                </label>
+
+                {termsError && (
+                  <p className="text-xs font-semibold text-rose-600">{termsError}</p>
+                )}
+              </div>
+            )}
+
             {/* Instruction Notice */}
             <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border border-amber-200 p-3.5 text-xs text-amber-900">
               <Clock className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
               <p>
-                Setelah melakukan transfer atau scan QRIS, klik tombol di bawah untuk diarahkan ke <strong>WhatsApp Admin ({site.whatsapp})</strong> untuk mengirimkan bukti transfer pembayaran.
+                Setelah melakukan transfer atau scan QRIS sebesar <strong>{formatRupiah(activePayAmount)}</strong>, klik tombol di bawah untuk diarahkan ke <strong>WhatsApp Admin ({site.whatsapp})</strong> untuk mengirimkan bukti transfer pembayaran.
               </p>
             </div>
 
@@ -413,7 +617,9 @@ Berikut saya kirimkan bukti transfer pembayaran. Mohon segera diverifikasi dan d
               className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] py-4 px-6 text-sm font-bold uppercase tracking-wider text-white shadow-soft hover:bg-[#1ebd59] transition"
             >
               <MessageCircle className="h-5 w-5" />
-              <span>Konfirmasi Pembayaran ke WhatsApp Admin</span>
+              <span>
+                Konfirmasi {paymentType === 'dp' ? `DP ${dpPct}% (${formatRupiah(activePayAmount)})` : `Lunas (${formatRupiah(activePayAmount)})`} ke WhatsApp
+              </span>
             </button>
           </div>
         ) : (
@@ -448,12 +654,34 @@ Berikut saya kirimkan bukti transfer pembayaran. Mohon segera diverifikasi dan d
                 <span className="font-medium text-ink">{createdBooking?.meetingPoint}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-ink/60">Status Pembayaran:</span>
-                <span className="font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded">Menunggu Konfirmasi</span>
+                <span className="text-ink/60">Skema Pembayaran:</span>
+                <span className="font-bold text-forest">
+                  {createdBooking?.paymentType === 'dp'
+                    ? `Down Payment (DP ${createdBooking.dpPercentage || dpPct}%)`
+                    : 'Pembayaran Penuh (100%)'}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-ink/60">Total:</span>
-                <span className="font-bold text-ember">{formatRupiah(createdBooking?.totalPrice || 0)}</span>
+                <span className="text-ink/60">Total Biaya Trip:</span>
+                <span className="font-semibold text-ink">{formatRupiah(createdBooking?.totalPrice || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-ink/60">Nominal Dibayar Sekarang:</span>
+                <span className="font-bold text-ember">
+                  {formatRupiah(createdBooking?.paidAmount || createdBooking?.totalPrice || 0)}
+                </span>
+              </div>
+              {(createdBooking?.remainingAmount || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-ink/60">Sisa Pelunasan:</span>
+                  <span className="font-bold text-amber-700">
+                    {formatRupiah(createdBooking?.remainingAmount || 0)}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-ink/60">Status Pembayaran:</span>
+                <span className="font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded">Menunggu Konfirmasi</span>
               </div>
             </div>
 

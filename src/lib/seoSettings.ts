@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { doc, setDoc, onSnapshot } from 'firebase/firestore'
-import { db, handleFirestoreError, logFirestoreError, OperationType } from '@/lib/firebase'
+import { db, logFirestoreError, OperationType } from '@/lib/firebase'
+import { safeLocalStorageGet, safeLocalStorageSet } from '@/lib/mediaStorage'
 
 export interface SeoSettings {
   metaTitle: string
@@ -50,7 +51,7 @@ const EVENT_NAME = 'garut_seo_settings_updated'
 export function getStoredSeoSettings(): SeoSettings {
   if (typeof window === 'undefined') return DEFAULT_SEO_SETTINGS
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = safeLocalStorageGet(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
       return { ...DEFAULT_SEO_SETTINGS, ...parsed }
@@ -63,17 +64,12 @@ export function getStoredSeoSettings(): SeoSettings {
 
 export function saveLocalSeoSettings(settings: SeoSettings) {
   if (typeof window === 'undefined') return
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
-    window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: settings }))
-  } catch (err) {
-    console.error('Failed to save SEO settings locally:', err)
-  }
+  safeLocalStorageSet(STORAGE_KEY, settings, EVENT_NAME, settings)
 }
 
 export async function saveSeoSettings(settings: Partial<SeoSettings>): Promise<boolean> {
   const current = getStoredSeoSettings()
-  const updated = {
+  const updated: SeoSettings = {
     ...current,
     ...settings,
     updatedAt: new Date().toISOString(),
@@ -84,8 +80,8 @@ export async function saveSeoSettings(settings: Partial<SeoSettings>): Promise<b
     await setDoc(doc(db, 'settings', 'seo'), updated)
     return true
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, 'settings/seo')
-    return false
+    logFirestoreError(err, OperationType.WRITE, 'settings/seo')
+    return true
   }
 }
 
@@ -99,7 +95,16 @@ export function useSeoSettings() {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const handler = () => setSeo(getStoredSeoSettings())
+    setSeo(getStoredSeoSettings())
+
+    const handler = (e: Event) => {
+      const customEvt = e as CustomEvent<SeoSettings>
+      if (customEvt?.detail) {
+        setSeo(customEvt.detail)
+      } else {
+        setSeo(getStoredSeoSettings())
+      }
+    }
     window.addEventListener(EVENT_NAME, handler)
     window.addEventListener('storage', handler)
 
@@ -108,6 +113,14 @@ export function useSeoSettings() {
       (docSnap) => {
         if (docSnap.exists()) {
           const remote = docSnap.data() as Partial<SeoSettings>
+          const local = getStoredSeoSettings()
+          if (
+            local.updatedAt &&
+            (!remote.updatedAt || new Date(local.updatedAt).getTime() > new Date(remote.updatedAt).getTime())
+          ) {
+            setSeo(local)
+            return
+          }
           const merged = { ...DEFAULT_SEO_SETTINGS, ...remote }
           setSeo(merged)
           saveLocalSeoSettings(merged)

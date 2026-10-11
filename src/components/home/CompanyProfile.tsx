@@ -269,6 +269,37 @@ export function CompanyProfile() {
             </Reveal>
           ))}
         </div>
+
+        {/* Syarat & Ketentuan Resmi Perjalanan (Editable by Admin) */}
+        {p.termsAndConditions && p.termsAndConditions.length > 0 && (
+          <Reveal delay={180} className="mt-12 rounded-[2.25rem] bg-white p-8 sm:p-10 shadow-soft border border-ink/5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-ink/10 pb-5">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-ember">
+                  <FileCheck className="h-4 w-4" />
+                  <span>Ketentuan Resmi Reservasi &amp; Trip</span>
+                </div>
+                <h3 className="font-display mt-2 text-2xl sm:text-3xl font-semibold text-forest">
+                  Syarat &amp; Ketentuan Perjalanan (Terms &amp; Conditions)
+                </h3>
+              </div>
+              {p.enableDownPayment !== false && (
+                <span className="inline-flex items-center gap-2 rounded-full bg-ember/15 px-4 py-2 text-xs font-bold text-ember shrink-0">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Tersedia Booking DP {p.downPaymentPercentage ?? 30}% dari Total Trip</span>
+                </span>
+              )}
+            </div>
+
+            <ol className="mt-6 grid gap-3 sm:grid-cols-2 list-decimal pl-5 text-xs sm:text-sm text-ink/75 leading-relaxed">
+              {p.termsAndConditions.map((term, idx) => (
+                <li key={idx} className="pl-1 pr-2">
+                  {term}
+                </li>
+              ))}
+            </ol>
+          </Reveal>
+        )}
       </div>
     </section>
   )

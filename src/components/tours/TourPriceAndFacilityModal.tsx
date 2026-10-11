@@ -5,8 +5,8 @@ import {
   Check,
   ChevronRight,
   Clock,
+  FileText,
   HelpCircle,
-  MapPin,
   MessageCircle,
   ShieldCheck,
   Users,
@@ -17,6 +17,7 @@ import { calculatePriceForPax, type CityTour, type TourPackage } from '@/data/to
 import { selectTour } from '@/lib/trip'
 import { handleNavClick } from '@/lib/nav'
 import { whatsappLink } from '@/data/site'
+import { useCompanyProfile } from '@/lib/companyStorage'
 
 interface TourModalProps {
   tour: CityTour | TourPackage
@@ -55,14 +56,19 @@ function getVehicleRecommendation(pax: number): { name: string; icon: 'car' | 'b
 }
 
 export function TourPriceAndFacilityModal({ tour, isOpen, onClose }: TourModalProps) {
-  const [activeTab, setActiveTab] = useState<'pricing' | 'facilities' | 'itinerary'>('pricing')
+  const [activeTab, setActiveTab] = useState<'pricing' | 'facilities' | 'itinerary' | 'terms'>('pricing')
   const [paxCount, setPaxCount] = useState<number>(4)
+  const { profile } = useCompanyProfile()
+  const dpPct = profile.downPaymentPercentage ?? 30
+  const dpEnabled = profile.enableDownPayment !== false
+  const termsList = profile.termsAndConditions || []
 
   if (!isOpen) return null
 
   // Extract base numeric price for calculations
   const rawPriceNum = Number(tour.price.replace(/\D/g, '')) || 350000
   const calculation = calculatePriceForPax(tour.priceTiers, paxCount, rawPriceNum)
+  const dpAmount = Math.round((calculation.totalPrice * dpPct) / 100)
   const soloCalculation = calculatePriceForPax(tour.priceTiers, 1, rawPriceNum)
   const savingsPct =
     paxCount > 1 && soloCalculation.pricePerPax > calculation.pricePerPax
@@ -190,6 +196,19 @@ export function TourPriceAndFacilityModal({ tour, isOpen, onClose }: TourModalPr
                 <span>Rencana Perjalanan</span>
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('terms')}
+              className={`rounded-xl px-4 py-2 text-xs font-bold transition flex items-center gap-2 ${
+                activeTab === 'terms'
+                  ? 'bg-white text-forest shadow-soft'
+                  : 'bg-white/10 text-cream/80 hover:bg-white/20'
+              }`}
+            >
+              <FileText className="h-4 w-4" />
+              <span>Syarat &amp; Ketentuan</span>
+            </button>
           </div>
         </div>
 
@@ -280,7 +299,12 @@ export function TourPriceAndFacilityModal({ tour, isOpen, onClose }: TourModalPr
                           {formatRupiah(calculation.totalPrice)}
                         </span>
                       </div>
-                      <p className="text-[0.7rem] text-ink/50 mt-1">
+                      {dpEnabled && (
+                        <p className="text-xs font-bold text-forest mt-1">
+                          Bisa Booking dengan DP {dpPct}%: <span className="text-ember">{formatRupiah(dpAmount)}</span>
+                        </p>
+                      )}
+                      <p className="text-[0.7rem] text-ink/50 mt-0.5">
                         *Sudah termasuk seluruh fasilitas, tiket &amp; guide resmi
                       </p>
                     </div>
@@ -449,6 +473,54 @@ export function TourPriceAndFacilityModal({ tour, isOpen, onClose }: TourModalPr
                   </li>
                 ))}
               </ol>
+            </div>
+          )}
+
+          {/* TAB 4: SYARAT & KETENTUAN TRIP */}
+          {activeTab === 'terms' && (
+            <div className="space-y-5">
+              <div className="rounded-3xl bg-forest/5 border border-forest/15 p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-forest/10 pb-3">
+                  <div className="flex items-center gap-2 text-forest font-bold text-sm uppercase tracking-wider">
+                    <FileText className="h-5 w-5 text-ember shrink-0" />
+                    <span>Syarat &amp; Ketentuan Resmi Perjalanan (Trip)</span>
+                  </div>
+                  {dpEnabled && (
+                    <span className="rounded-full bg-ember/15 px-3 py-1 text-[0.7rem] font-bold text-ember">
+                      Tersedia DP {dpPct}%
+                    </span>
+                  )}
+                </div>
+
+                <ol className="space-y-3 list-decimal pl-5 text-xs text-ink/85 leading-relaxed">
+                  {termsList.map((term, idx) => (
+                    <li key={idx} className="pl-1">
+                      {term}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              {dpEnabled && (
+                <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-950">
+                  <div>
+                    <strong className="block text-amber-900">
+                      Kemudahan Booking dengan Down Payment (DP {dpPct}%)
+                    </strong>
+                    <span className="text-amber-800/90">
+                      Untuk {paxCount} peserta, Anda cukup membayar DP {dpPct}% sebesar{' '}
+                      <strong>{formatRupiah(dpAmount)}</strong> untuk mengunci jadwal &amp; armada.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleBookNow}
+                    className="shrink-0 rounded-full bg-ember px-4 py-2 text-xs font-bold text-white hover:bg-ember-600 transition"
+                  >
+                    Booking dengan DP {dpPct}%
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

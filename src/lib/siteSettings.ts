@@ -3,7 +3,7 @@ import { doc, setDoc, onSnapshot } from 'firebase/firestore'
 import { db, logFirestoreError, OperationType } from '@/lib/firebase'
 import { site as defaultSite } from '@/data/site'
 import type { LanguageCode } from '@/lib/i18n'
-import { safeLocalStorageSet } from '@/lib/mediaStorage'
+import { persistMedia, safeLocalStorageGet, safeLocalStorageSet } from '@/lib/mediaStorage'
 
 const SETTINGS_KEY = 'garut_journey_site_settings_v2'
 const SETTINGS_EVENT = 'garut_site_settings_updated'
@@ -122,6 +122,7 @@ export interface SiteSettings {
   whatsappShowFab?: boolean
   whatsappFabPosition?: 'right' | 'left'
   whatsappPulseEffect?: boolean
+  updatedAt?: string
 }
 
 export const initialSiteSettings: SiteSettings = {
@@ -230,7 +231,7 @@ export const initialSiteSettings: SiteSettings = {
 export function getStoredSiteSettings(): SiteSettings {
   if (typeof window === 'undefined') return initialSiteSettings
   try {
-    const raw = localStorage.getItem(SETTINGS_KEY)
+    const raw = safeLocalStorageGet(SETTINGS_KEY)
     if (raw) {
       return { ...initialSiteSettings, ...JSON.parse(raw) }
     }
@@ -247,14 +248,23 @@ export function saveLocalSiteSettings(settings: SiteSettings) {
 
 export async function saveSiteSettings(settings: Partial<SiteSettings>): Promise<boolean> {
   const current = getStoredSiteSettings()
-  const updated = { ...current, ...settings }
+  const updated: SiteSettings = {
+    ...current,
+    ...settings,
+    updatedAt: new Date().toISOString(),
+  }
+
+  if (updated.customLogoUrl && updated.customLogoUrl.startsWith('data:')) {
+    void persistMedia('site-custom-logo', updated.customLogoUrl)
+  }
+  if (updated.faviconUrl && updated.faviconUrl.startsWith('data:')) {
+    void persistMedia('site-custom-favicon', updated.faviconUrl)
+  }
+
   saveLocalSiteSettings(updated)
 
   try {
-    await setDoc(doc(db, 'settings', 'default'), {
-      ...updated,
-      updatedAt: new Date().toISOString(),
-    })
+    await setDoc(doc(db, 'settings', 'default'), updated)
     return true
   } catch (err) {
     logFirestoreError(err, OperationType.WRITE, 'settings/default')
@@ -263,7 +273,7 @@ export async function saveSiteSettings(settings: Partial<SiteSettings>): Promise
 }
 
 export function useSiteSettings() {
-  const [settings, setSettings] = useState<SiteSettings>(initialSiteSettings)
+  const [settings, setSettings] = useState<SiteSettings>(() => getStoredSiteSettings())
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -271,7 +281,14 @@ export function useSiteSettings() {
     // Synchronize client-stored settings after hydration
     setSettings(getStoredSiteSettings())
 
-    const handler = () => setSettings(getStoredSiteSettings())
+    const handler = (e: Event) => {
+      const customEvt = e as CustomEvent<SiteSettings>
+      if (customEvt?.detail) {
+        setSettings(customEvt.detail)
+      } else {
+        setSettings(getStoredSiteSettings())
+      }
+    }
     window.addEventListener(SETTINGS_EVENT, handler)
     window.addEventListener('storage', handler)
 
@@ -280,6 +297,14 @@ export function useSiteSettings() {
       (docSnap) => {
         if (docSnap.exists()) {
           const remote = docSnap.data() as Partial<SiteSettings>
+          const local = getStoredSiteSettings()
+          if (
+            local.updatedAt &&
+            (!remote.updatedAt || new Date(local.updatedAt).getTime() > new Date(remote.updatedAt).getTime())
+          ) {
+            setSettings(local)
+            return
+          }
           const merged = { ...initialSiteSettings, ...remote }
           setSettings(merged)
           saveLocalSiteSettings(merged)

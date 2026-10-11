@@ -8,51 +8,89 @@ import { img } from '@/lib/img'
 import { useLanguage } from '@/lib/i18n'
 import { trackPageView } from '@/lib/trafficTracker'
 import { scrollToSection } from '@/lib/nav'
-import { useSeoSettings } from '@/lib/seoSettings'
-import { useSiteSettings } from '@/lib/siteSettings'
+import { DEFAULT_SEO_SETTINGS, getStoredSeoSettings, useSeoSettings } from '@/lib/seoSettings'
+import { getStoredSiteSettings, initialSiteSettings, useSiteSettings } from '@/lib/siteSettings'
 
 import '../styles.css'
 
-const title = 'Garut Journey — Explore Garut, Feel the Story.'
+const defaultTitle = `${site.name} — ${site.tagline}`
+
+function computeActiveTitle(
+  settings: ReturnType<typeof getStoredSiteSettings>,
+  seo: ReturnType<typeof getStoredSeoSettings>
+): string {
+  const siteIdentityChanged =
+    (settings.name && settings.name !== initialSiteSettings.name) ||
+    (settings.tagline && settings.tagline !== initialSiteSettings.tagline)
+  const seoTitleChanged =
+    seo.metaTitle &&
+    seo.metaTitle !== DEFAULT_SEO_SETTINGS.metaTitle &&
+    seo.metaTitle !== defaultTitle
+
+  if (siteIdentityChanged && !seoTitleChanged) {
+    return `${settings.name || site.name} — ${settings.tagline || settings.subtitle || site.tagline}`
+  }
+  if (seoTitleChanged) {
+    return seo.metaTitle
+  }
+  if (settings.name || settings.tagline) {
+    return `${settings.name || site.name} — ${settings.tagline || site.tagline}`
+  }
+  return seo.metaTitle || defaultTitle
+}
+
+function computeActiveFavicon(settings: ReturnType<typeof getStoredSiteSettings>): string {
+  if (settings.faviconType === 'custom' && settings.faviconUrl) {
+    return settings.faviconUrl
+  }
+  if (settings.faviconType === 'same-as-logo' && settings.customLogoUrl) {
+    return settings.customLogoUrl
+  }
+  return settings.faviconUrl || '/favicon.svg'
+}
 
 export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title },
-      { name: 'description', content: site.description },
-      { name: 'theme-color', content: '#1F5D42' },
-      { property: 'og:site_name', content: site.name },
-      { property: 'og:title', content: title },
-      { property: 'og:description', content: site.description },
-      { property: 'og:type', content: 'website' },
-      { property: 'og:image', content: img('hero.png', 1200) },
-      { name: 'twitter:card', content: 'summary_large_image' },
-    ],
-    links: [
-      { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
-      { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-      { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
-      {
-        rel: 'stylesheet',
-        href: 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..700,50;1,9..144,300..700,50&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap',
-      },
-    ],
-    scripts: [
-      {
-        type: 'application/ld+json',
-        children: JSON.stringify({
-          '@context': 'https://schema.org',
-          '@type': 'TravelAgency',
-          name: site.name,
-          slogan: site.tagline,
-          description: site.description,
-          areaServed: 'Garut, West Java, Indonesia',
-        }),
-      },
-    ],
-  }),
+  head: () => {
+    const storedSite = getStoredSiteSettings()
+    const storedSeo = getStoredSeoSettings()
+    const activeTitle = computeActiveTitle(storedSite, storedSeo)
+    return {
+      meta: [
+        { charSet: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { title: activeTitle },
+        { name: 'description', content: storedSeo.metaDescription || site.description },
+        { name: 'theme-color', content: '#1F5D42' },
+        { property: 'og:site_name', content: storedSite.name || site.name },
+        { property: 'og:title', content: storedSeo.ogTitle || activeTitle },
+        { property: 'og:description', content: storedSeo.ogDescription || storedSeo.metaDescription || site.description },
+        { property: 'og:type', content: 'website' },
+        { property: 'og:image', content: img(storedSeo.ogImage || 'hero.png', 1200) },
+        { name: 'twitter:card', content: 'summary_large_image' },
+      ],
+      links: [
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
+        {
+          rel: 'stylesheet',
+          href: 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..700,50;1,9..144,300..700,50&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap',
+        },
+      ],
+      scripts: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'TravelAgency',
+            name: storedSite.name || site.name,
+            slogan: storedSite.tagline || site.tagline,
+            description: storedSeo.metaDescription || site.description,
+            areaServed: 'Garut, West Java, Indonesia',
+          }),
+        },
+      ],
+    }
+  },
   shellComponent: RootDocument,
   notFoundComponent: NotFound,
 })
@@ -91,29 +129,19 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     trackPageView(pathname)
   }, [pathname])
 
-  // Dynamically synchronize SEO metadata, Schema.org JSON-LD & Favicon from database
+  // Dynamically synchronize SEO metadata, Schema.org JSON-LD, Tab Title & Favicon from admin settings
   useEffect(() => {
-    if (typeof document === 'undefined' || isAdminPage) return
+    if (typeof document === 'undefined') return
 
-    if (seo.metaTitle) {
-      document.title = seo.metaTitle
-    }
-
-    // Dynamic browser tab favicon (Gambar ke-2)
-    const activeFavicon =
-      settings.faviconType === 'custom' && settings.faviconUrl
-        ? settings.faviconUrl
-        : settings.faviconType === 'same-as-logo' && settings.customLogoUrl
-        ? settings.customLogoUrl
-        : settings.faviconUrl || '/favicon.svg'
+    // Resolve active favicon from admin settings (works across both public & admin pages)
+    const activeFavicon = computeActiveFavicon(settings)
 
     if (activeFavicon) {
-      let favEl = document.querySelector('link[rel="icon"]') as HTMLLinkElement | null
-      if (!favEl) {
-        favEl = document.createElement('link')
-        favEl.setAttribute('rel', 'icon')
-        document.head.appendChild(favEl)
-      }
+      const existingIcons = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]')
+      existingIcons.forEach((el) => el.parentNode?.removeChild(el))
+
+      const favEl = document.createElement('link')
+      favEl.setAttribute('rel', 'icon')
       favEl.setAttribute('href', activeFavicon)
       if (activeFavicon.endsWith('.svg') || activeFavicon.startsWith('data:image/svg+xml')) {
         favEl.setAttribute('type', 'image/svg+xml')
@@ -122,7 +150,25 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       } else {
         favEl.setAttribute('type', 'image/png')
       }
+      document.head.appendChild(favEl)
     }
+
+    // Resolve dynamic browser tab title on home, admin, and public pages
+    const isDetailRoute = pathname.startsWith('/destinations/') || pathname.startsWith('/guide/')
+    if (!isDetailRoute) {
+      const resolvedTitle = computeActiveTitle(settings, seo)
+      document.title = resolvedTitle
+      const titleTags = document.querySelectorAll('head > title')
+      titleTags.forEach((tag, idx) => {
+        if (idx === 0) {
+          tag.textContent = resolvedTitle
+        } else {
+          tag.parentNode?.removeChild(tag)
+        }
+      })
+    }
+
+    if (isAdminPage) return
 
     const setMeta = (nameOrProperty: string, content: string, isProperty = false) => {
       if (!content) return
@@ -139,14 +185,16 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       el.setAttribute('content', content)
     }
 
+    const activeTitle = document.title || seo.metaTitle || defaultTitle
     setMeta('description', seo.metaDescription)
     setMeta('keywords', seo.focusKeywords)
     setMeta('author', seo.author)
     setMeta('robots', `${seo.robotsIndex ? 'index' : 'noindex'}, ${seo.robotsFollow ? 'follow' : 'nofollow'}`)
-    setMeta('og:title', seo.ogTitle || seo.metaTitle, true)
+    setMeta('og:site_name', settings.name || site.name, true)
+    setMeta('og:title', seo.ogTitle && seo.ogTitle !== defaultTitle ? seo.ogTitle : activeTitle, true)
     setMeta('og:description', seo.ogDescription || seo.metaDescription, true)
     setMeta('og:image', img(seo.ogImage || 'hero.png', 1200), true)
-    setMeta('twitter:title', seo.ogTitle || seo.metaTitle)
+    setMeta('twitter:title', seo.ogTitle && seo.ogTitle !== defaultTitle ? seo.ogTitle : activeTitle)
     setMeta('twitter:description', seo.ogDescription || seo.metaDescription)
     setMeta('twitter:image', img(seo.ogImage || 'hero.png', 1200))
 
@@ -170,10 +218,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     schemaScript.text = JSON.stringify({
       '@context': 'https://schema.org',
       '@type': seo.schemaType || 'TravelAgency',
-      name: 'Garut Journey',
+      name: settings.name || 'Garut Journey',
       url: seo.canonicalUrl || 'https://garutjourney.com',
       description: seo.metaDescription,
-      telephone: seo.schemaTelephone,
+      telephone: seo.schemaTelephone || settings.whatsapp,
       priceRange: seo.schemaPriceRange,
       address: {
         '@type': 'PostalAddress',
@@ -182,7 +230,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         addressCountry: seo.schemaAddressCountry || 'ID',
       },
     })
-  }, [seo, isAdminPage])
+  }, [seo, settings, pathname, isAdminPage])
 
   // Smooth scroll to hash on initial load or route transition (e.g. from /destinations/... to /#destinations)
   useEffect(() => {
