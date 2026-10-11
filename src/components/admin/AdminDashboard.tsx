@@ -498,9 +498,16 @@ export function AdminDashboard() {
     setPaySettingsForm(paymentConfig)
   }, [paymentConfig])
 
-  const notifySuccess = (msg: string) => {
-    setSuccessMsg(msg)
-    setTimeout(() => setSuccessMsg(null), 4000)
+  const notifySuccess = (msg: string, isError?: boolean) => {
+    if (isError) {
+      setErrorMsg(msg)
+      setSuccessMsg(null)
+      setTimeout(() => setErrorMsg(null), 5000)
+    } else {
+      setSuccessMsg(msg)
+      setErrorMsg(null)
+      setTimeout(() => setSuccessMsg(null), 4500)
+    }
   }
 
   const handleSavePaymentSettings = async (e: React.FormEvent) => {
@@ -1369,20 +1376,85 @@ Tim Garut Journey`
         </div>
       </header>
 
+      {/* Floating Fixed Toast Notification (Always visible on scroll) */}
+      {(successMsg || errorMsg) && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-md w-full px-4 sm:px-0 animate-fade-in">
+          {successMsg && (
+            <div className="flex items-start justify-between gap-3 rounded-2xl bg-emerald-700 text-white p-4 shadow-2xl border border-emerald-400/40">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="h-5 w-5 text-emerald-200 shrink-0 mt-0.5" />
+                <div>
+                  <span className="text-[0.65rem] font-bold uppercase tracking-widest text-emerald-200 block">
+                    Notifikasi Berhasil
+                  </span>
+                  <p className="text-xs sm:text-sm font-semibold mt-0.5 leading-snug">{successMsg}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSuccessMsg(null)}
+                className="text-white/70 hover:text-white text-sm font-bold px-1.5"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {errorMsg && (
+            <div className="flex items-start justify-between gap-3 rounded-2xl bg-rose-700 text-white p-4 shadow-2xl border border-rose-400/40 mt-2">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-rose-200 shrink-0 mt-0.5" />
+                <div>
+                  <span className="text-[0.65rem] font-bold uppercase tracking-widest text-rose-200 block">
+                    Notifikasi Gagal / Peringatan
+                  </span>
+                  <p className="text-xs sm:text-sm font-semibold mt-0.5 leading-snug">{errorMsg}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setErrorMsg(null)}
+                className="text-white/70 hover:text-white text-sm font-bold px-1.5"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Main Content Area */}
       <main className="mx-auto max-w-7xl px-5 pt-8 lg:px-8">
-        {/* Toast Notification */}
+        {/* Inline Toast Notification Banner */}
         {successMsg && (
-          <div className="mb-6 flex items-center gap-3 rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-900 shadow-soft animate-fade-in">
-            <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-            <p className="text-sm font-medium">{successMsg}</p>
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl bg-emerald-50 border border-emerald-300 p-4 text-emerald-900 shadow-soft animate-fade-in">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+              <p className="text-sm font-semibold">{successMsg}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSuccessMsg(null)}
+              className="text-xs font-bold text-emerald-700 hover:text-emerald-950"
+            >
+              Tutup
+            </button>
           </div>
         )}
 
         {errorMsg && (
-          <div className="mb-6 flex items-center gap-3 rounded-2xl bg-rose-50 border border-rose-200 p-4 text-rose-900 shadow-soft animate-fade-in">
-            <AlertCircle className="h-5 w-5 text-rose-600 shrink-0" />
-            <p className="text-sm font-medium">{errorMsg}</p>
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl bg-rose-50 border border-rose-300 p-4 text-rose-900 shadow-soft animate-fade-in">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 text-rose-600 shrink-0" />
+              <p className="text-sm font-semibold">{errorMsg}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setErrorMsg(null)}
+              className="text-xs font-bold text-rose-700 hover:text-rose-950"
+            >
+              Tutup
+            </button>
           </div>
         )}
 
@@ -1560,7 +1632,7 @@ Tim Garut Journey`
 
               {/* Status Filter Pills */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-                {(['All', 'Menunggu Konfirmasi', 'Lunas', 'Selesai', 'Dibatalkan'] as const).map((st) => (
+                {(['All', 'Menunggu Konfirmasi', 'DP 30%', 'Lunas', 'Selesai', 'Dibatalkan'] as const).map((st) => (
                   <button
                     key={st}
                     type="button"
@@ -1601,6 +1673,8 @@ Tim Garut Journey`
                             className={`rounded-full px-2.5 py-0.5 text-[0.7rem] font-bold ${
                               b.paymentStatus === 'Lunas'
                                 ? 'bg-emerald-100 text-emerald-800'
+                                : b.paymentStatus === 'DP 30%'
+                                ? 'bg-amber-100 text-amber-900 border border-amber-300'
                                 : b.paymentStatus === 'Menunggu Konfirmasi'
                                 ? 'bg-amber-100 text-amber-800'
                                 : b.paymentStatus === 'Selesai'
@@ -1610,6 +1684,11 @@ Tim Garut Journey`
                           >
                             {b.paymentStatus}
                           </span>
+                          {b.paymentType === 'dp' && (
+                            <span className="rounded-full bg-ember/15 text-ember px-2 py-0.5 text-[0.65rem] font-bold">
+                              Skema DP {b.dpPercentage || 30}%
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink/75">
@@ -1651,12 +1730,17 @@ Tim Garut Journey`
                         <span className="font-bold text-sm text-ember font-mono block mt-1">
                           {formatRupiah(b.totalPrice)}
                         </span>
+                        {b.paymentType === 'dp' && b.paidAmount && (
+                          <span className="text-[0.68rem] font-semibold text-forest block">
+                            DP Dibayar: {formatRupiah(b.paidAmount)} (Sisa: {formatRupiah(b.remainingAmount || 0)})
+                          </span>
+                        )}
                       </div>
 
                       {/* Action Controls */}
                       <div className="flex flex-wrap items-center gap-2 pt-3 lg:pt-0 border-t lg:border-t-0 border-ink/10">
                         {/* Quick Confirm & Send Button */}
-                        {b.paymentStatus === 'Menunggu Konfirmasi' && (
+                        {(b.paymentStatus === 'Menunggu Konfirmasi' || b.paymentStatus === 'DP 30%') && (
                           <button
                             type="button"
                             onClick={() => handleConfirmPaymentAndSendKwitansi(b)}
@@ -1675,6 +1759,7 @@ Tim Garut Journey`
                           className="rounded-xl border border-ink/20 bg-cream/30 px-3 py-1.5 text-xs font-semibold text-ink focus:border-forest focus:outline-none"
                         >
                           <option value="Menunggu Konfirmasi">Menunggu Konfirmasi</option>
+                          <option value="DP 30%">DP 30%</option>
                           <option value="Lunas">Lunas</option>
                           <option value="Selesai">Selesai</option>
                           <option value="Dibatalkan">Dibatalkan</option>
@@ -4864,7 +4949,7 @@ Tim Garut Journey`
         {/* ======================================= */}
         {/* TAB: DOKUMEN LEGALITAS & PROFIL PT      */}
         {/* ======================================= */}
-        {activeTab === 'legalitas' && <CompanyLegalManager />}
+        {activeTab === 'legalitas' && <CompanyLegalManager onNotify={notifySuccess} />}
 
         {/* ======================================= */}
         {/* TAB: OPTIMASI SEO & GOOGLE RANKING     */}
@@ -4968,9 +5053,25 @@ Tim Garut Journey`
                   <span className="font-medium text-ink">{selectedBookingDetail.paymentMethod}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-ink/5">
-                  <span className="text-ink/60">Total Biaya:</span>
+                  <span className="text-ink/60">Total Biaya Trip:</span>
                   <span className="font-bold text-sm text-ember">{formatRupiah(selectedBookingDetail.totalPrice)}</span>
                 </div>
+                {selectedBookingDetail.paymentType === 'dp' && (
+                  <>
+                    <div className="flex justify-between py-1 border-b border-ink/5">
+                      <span className="text-ink/60">Nominal DP ({selectedBookingDetail.dpPercentage || 30}%):</span>
+                      <span className="font-bold text-xs text-forest">
+                        {formatRupiah(selectedBookingDetail.paidAmount || Math.round(selectedBookingDetail.totalPrice * 0.3))}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-ink/5">
+                      <span className="text-ink/60">Sisa Pelunasan:</span>
+                      <span className="font-bold text-xs text-amber-800">
+                        {formatRupiah(selectedBookingDetail.remainingAmount || Math.round(selectedBookingDetail.totalPrice * 0.7))}
+                      </span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between py-1 border-b border-ink/5 items-center">
                   <span className="text-ink/60">Status Pembayaran:</span>
                   <span

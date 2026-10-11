@@ -36,7 +36,7 @@ const AVAILABLE_OG_IMAGES = [
 ]
 
 interface SeoManagerProps {
-  onNotify: (msg: string) => void
+  onNotify: (msg: string, isError?: boolean) => void
 }
 
 export function SeoManager({ onNotify }: SeoManagerProps) {
@@ -112,7 +112,9 @@ export function SeoManager({ onNotify }: SeoManagerProps) {
     })
     setIsSaving(false)
     if (success) {
-      onNotify('Pengaturan SEO berhasil disimpan dan disinkronkan ke seluruh sistem!')
+      onNotify('Berhasil! Pengaturan SEO berhasil disimpan dan disinkronkan ke seluruh sistem.')
+    } else {
+      onNotify('Gagal menyimpan pengaturan SEO.', true)
     }
   }
 

@@ -67,7 +67,7 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-export function ToursManager({ onNotify }: { onNotify: (msg: string) => void }) {
+export function ToursManager({ onNotify }: { onNotify: (msg: string, isError?: boolean) => void }) {
   const cityTours = useCityTours()
   const packages = useTourPackages()
   const { prices, updatePrice } = useTourPrices()
@@ -152,9 +152,9 @@ export function ToursManager({ onNotify }: { onNotify: (msg: string) => void }) 
     try {
       const dataUrl = await readAndCompressImage(file)
       setCtImage(dataUrl)
-      onNotify(`Gambar "${file.name}" berhasil di-upload untuk Paket Tour!`)
+      onNotify(`Berhasil! Gambar "${file.name}" berhasil di-upload untuk Paket Tour.`)
     } catch {
-      onNotify('Gagal memproses file gambar.')
+      onNotify('Gagal memproses file gambar paket tour.', true)
     } finally {
       setCtUploading(false)
     }

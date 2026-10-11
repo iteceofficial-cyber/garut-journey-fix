@@ -77,7 +77,7 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void }) {
+export function SectionsManager({ onNotify }: { onNotify: (msg: string, isError?: boolean) => void }) {
   const dishes = useCulinary()
   const gallery = useGallery()
   const experiences = useExperiences()
@@ -122,9 +122,9 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
     try {
       const dataUrl = await readAndCompressImage(file)
       setDishImage(dataUrl)
-      onNotify(`Gambar "${file.name}" berhasil di-upload untuk kuliner!`)
+      onNotify(`Berhasil! Gambar "${file.name}" berhasil di-upload untuk kuliner.`)
     } catch {
-      onNotify('Gagal memproses file gambar.')
+      onNotify('Gagal memproses file gambar kuliner.', true)
     } finally {
       setDishUploading(false)
     }
@@ -143,10 +143,10 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
         image: dishImage.trim() || 'sundanese.png',
         description: dishDesc.trim() || `Kuliner khas Garut ${dishName.trim()}.`,
       })
-      onNotify(editingDishId ? `Kuliner "${dishName}" berhasil diperbarui!` : `Kuliner "${dishName}" berhasil ditambahkan!`)
+      onNotify(editingDishId ? `Berhasil! Kuliner "${dishName}" berhasil diperbarui.` : `Berhasil! Kuliner "${dishName}" berhasil ditambahkan.`)
       resetDishForm()
     } catch {
-      onNotify('Terjadi kendala saat menyimpan kuliner, tetapi perubahan tetap tersimpan di perangkat.')
+      onNotify('Gagal menyimpan perubahan kuliner.', true)
     }
   }
 
@@ -201,9 +201,9 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
         const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ')
         setGalTitle(cleanName.charAt(0).toUpperCase() + cleanName.slice(1))
       }
-      onNotify(`Foto "${file.name}" berhasil diunggah dan siap ditambahkan ke Galeri!`)
+      onNotify(`Berhasil! Foto "${file.name}" berhasil diunggah dan siap ditambahkan ke Galeri.`)
     } catch {
-      onNotify('Gagal membaca file gambar. Pastikan format file adalah JPG, PNG, atau WebP.')
+      onNotify('Gagal membaca file gambar. Pastikan format file adalah JPG, PNG, atau WebP.', true)
     } finally {
       setGalUploading(false)
     }
@@ -224,12 +224,12 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
       })
       onNotify(
         editingGalId
-          ? `Foto galeri "${galTitle}" berhasil diperbarui!`
-          : `Foto baru "${galTitle}" berhasil ditambahkan ke Galeri Website!`,
+          ? `Berhasil! Foto galeri "${galTitle}" berhasil diperbarui.`
+          : `Berhasil! Foto baru "${galTitle}" berhasil ditambahkan ke Galeri Website.`,
       )
       resetGalForm()
     } catch {
-      onNotify('Terjadi kendala saat menyimpan foto, tetapi perubahan tetap tersimpan di perangkat.')
+      onNotify('Gagal menyimpan foto ke Galeri.', true)
     }
   }
 
@@ -355,9 +355,9 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
     try {
       const dataUrl = await readAndCompressImage(file)
       setGuideImage(dataUrl)
-      onNotify(`Foto "${file.name}" berhasil diunggah untuk Guide!`)
+      onNotify(`Berhasil! Foto "${file.name}" berhasil diunggah untuk Guide.`)
     } catch {
-      onNotify('Gagal mengunggah foto guide.')
+      onNotify('Gagal mengunggah foto guide.', true)
     } finally {
       setGuideUploading(false)
     }
@@ -385,24 +385,32 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
         languages: guideLanguages.length > 0 ? guideLanguages : ['Bahasa Indonesia'],
         featured: true,
       })
-      onNotify(editingGuideId ? `Data guide "${guideName}" diperbarui!` : `Guide baru "${guideName}" berhasil ditambahkan!`)
+      onNotify(editingGuideId ? `Berhasil! Data guide "${guideName}" diperbarui.` : `Berhasil! Guide baru "${guideName}" berhasil ditambahkan.`)
       resetGuideForm()
     } catch {
-      onNotify('Terjadi kendala saat menyimpan data guide.')
+      onNotify('Gagal menyimpan data guide.', true)
     }
   }
 
-  const handleSaveBanners = (e: FormEvent) => {
+  const handleSaveBanners = async (e: FormEvent) => {
     e.preventDefault()
-    saveSiteSettings({
-      storyImage,
-      storySecondaryImage,
-      bookingEyebrow,
-      bookingTitle,
-      bookingSubtitle,
-      bookingImage,
-    })
-    onNotify('Pengaturan Banner Booking & Foto Cerita Kami berhasil disimpan!')
+    try {
+      const ok = await saveSiteSettings({
+        storyImage,
+        storySecondaryImage,
+        bookingEyebrow,
+        bookingTitle,
+        bookingSubtitle,
+        bookingImage,
+      })
+      if (ok) {
+        onNotify('Berhasil! Pengaturan Banner Booking & Foto Cerita Kami telah disimpan.')
+      } else {
+        onNotify('Gagal menyimpan pengaturan Banner Booking.', true)
+      }
+    } catch {
+      onNotify('Gagal menyimpan pengaturan Banner Booking.', true)
+    }
   }
 
   return (
@@ -805,7 +813,7 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string) => void 
                               }
                               onNotify(`Berhasil: Foto "${g.title}" telah dihapus dari galeri website.`)
                             } catch {
-                              onNotify(`Gagal menghapus foto "${g.title}". Silakan coba lagi.`)
+                              onNotify(`Gagal menghapus foto "${g.title}". Silakan coba lagi.`, true)
                             }
                           }}
                           className="rounded-lg bg-rose-50 px-2.5 py-1 text-[0.7rem] font-bold text-rose-700 hover:bg-rose-600 hover:text-white"

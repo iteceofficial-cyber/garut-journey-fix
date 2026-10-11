@@ -14,7 +14,7 @@ import { Img } from '@/components/Img'
 import { WhatsAppIcon } from '@/components/WhatsAppFab'
 
 interface WhatsAppManagerProps {
-  onNotify: (msg: string) => void
+  onNotify: (msg: string, isError?: boolean) => void
 }
 
 const PRESET_AVATARS = [
@@ -56,10 +56,14 @@ export function WhatsAppManager({ onNotify }: WhatsAppManagerProps) {
     e.preventDefault()
     setIsSaving(true)
     try {
-      await saveSiteSettings(form)
-      onNotify('Pengaturan Chat WhatsApp berhasil disimpan!')
+      const ok = await saveSiteSettings(form)
+      if (ok) {
+        onNotify('Berhasil! Pengaturan Chat WhatsApp berhasil disimpan.')
+      } else {
+        onNotify('Gagal menyimpan pengaturan WhatsApp.', true)
+      }
     } catch {
-      onNotify('Gagal menyimpan pengaturan WhatsApp.')
+      onNotify('Gagal menyimpan pengaturan WhatsApp.', true)
     } finally {
       setIsSaving(false)
     }
