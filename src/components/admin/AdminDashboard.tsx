@@ -15,6 +15,7 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  FileCheck,
   FileText,
   Globe2,
   KeyRound,
@@ -54,11 +55,12 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { exportBookingsToExcel, exportBookingsToCSV } from '@/lib/excelExport'
 import { Img } from '@/components/Img'
-import { readAndCompressImage } from '@/lib/img'
+import { readAndCompressImage, readAndCompressLogo, removeWhiteBackgroundFromImage } from '@/lib/img'
 import { ToursManager } from '@/components/admin/ToursManager'
 import { ReviewsManager } from '@/components/admin/ReviewsManager'
 import { SectionsManager } from '@/components/admin/SectionsManager'
 import { SeoManager } from '@/components/admin/SeoManager'
+import { CompanyLegalManager } from '@/components/admin/CompanyLegalManager'
 import { ArticleSeoChecker } from '@/components/admin/ArticleSeoChecker'
 import { WhatsAppManager } from '@/components/admin/WhatsAppManager'
 import { type Article, formatDate } from '@/data/articles'
@@ -177,10 +179,18 @@ export function AdminDashboard() {
   const [editAdminPass, setEditAdminPass] = useState('admin')
   const [showAccountPass, setShowAccountPass] = useState(false)
 
-  // Logo Customization Form State
+  // Logo & Branding Customization Form State
   const [logoType, setLogoType] = useState<'default' | 'custom'>(settings.logoType || 'default')
   const [customLogoUrl, setCustomLogoUrl] = useState(settings.customLogoUrl || '')
   const [logoHeight, setLogoHeight] = useState<number>(settings.logoHeight || 36)
+  const [logoRemoveBg, setLogoRemoveBg] = useState<boolean>(settings.logoRemoveBg !== false)
+
+  // Favicon (Tab Icon Gambar ke-2) State
+  const [faviconType, setFaviconType] = useState<'default' | 'custom' | 'same-as-logo'>(
+    settings.faviconType || 'default'
+  )
+  const [faviconUrl, setFaviconUrl] = useState<string>(settings.faviconUrl || '/favicon.svg')
+  const [faviconUploading, setFaviconUploading] = useState<boolean>(false)
 
   // Navigation tab
   const [activeTab, setActiveTab] = useState<
@@ -190,6 +200,7 @@ export function AdminDashboard() {
     | 'reviews'
     | 'all_sections'
     | 'settings'
+    | 'legalitas'
     | 'seo'
     | 'whatsapp_settings'
     | 'pricing_destinations'
@@ -320,14 +331,46 @@ export function AdminDashboard() {
     if (!file) return
     setLogoUploading(true)
     try {
-      const dataUrl = await readAndCompressImage(file, 600, 0.85)
+      const dataUrl = await readAndCompressLogo(file, { removeWhiteBg: true, maxWidth: 500 })
       setCustomLogoUrl(dataUrl)
       setLogoType('custom')
-      notifySuccess(`Logo "${file.name}" berhasil diunggah!`)
+      setLogoRemoveBg(true)
+      notifySuccess(`Logo "${file.name}" berhasil diunggah tanpa background (transparan)!`)
     } catch {
       setErrorMsg('Gagal membaca file logo.')
     } finally {
       setLogoUploading(false)
+    }
+  }
+
+  const handleMakeLogoTransparent = async () => {
+    if (!customLogoUrl) return
+    setLogoUploading(true)
+    try {
+      const cleanTransparent = await removeWhiteBackgroundFromImage(customLogoUrl, 32)
+      setCustomLogoUrl(cleanTransparent)
+      setLogoRemoveBg(true)
+      notifySuccess('Latar belakang putih logo berhasil dihapus menjadi transparan!')
+    } catch {
+      setErrorMsg('Gagal memproses transparansi logo.')
+    } finally {
+      setLogoUploading(false)
+    }
+  }
+
+  const handleFaviconFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setFaviconUploading(true)
+    try {
+      const dataUrl = await readAndCompressLogo(file, { isFavicon: true, removeWhiteBg: true, maxWidth: 96 })
+      setFaviconUrl(dataUrl)
+      setFaviconType('custom')
+      notifySuccess(`Favicon "${file.name}" berhasil diunggah & langsung aktif di tab browser!`)
+    } catch {
+      setErrorMsg('Gagal membaca file favicon.')
+    } finally {
+      setFaviconUploading(false)
     }
   }
 
@@ -364,6 +407,9 @@ export function AdminDashboard() {
     setLogoType(settings.logoType || 'default')
     setCustomLogoUrl(settings.customLogoUrl || '')
     setLogoHeight(settings.logoHeight || 36)
+    setLogoRemoveBg(settings.logoRemoveBg !== false)
+    setFaviconType(settings.faviconType || 'default')
+    setFaviconUrl(settings.faviconUrl || '/favicon.svg')
     setSocialInstagram(settings.socialInstagram || 'https://instagram.com/garutjourney')
     setSocialTikTok(settings.socialTikTok || 'https://tiktok.com/@garutjourney')
     setSocialFacebook(settings.socialFacebook || 'https://facebook.com/garutjourney')
@@ -732,6 +778,9 @@ export function AdminDashboard() {
       logoType,
       customLogoUrl: customLogoUrl.trim(),
       logoHeight,
+      logoRemoveBg,
+      faviconType,
+      faviconUrl: faviconUrl.trim(),
       socialInstagram: socialInstagram.trim() || initialSiteSettings.socialInstagram,
       socialTikTok: socialTikTok.trim() || initialSiteSettings.socialTikTok,
       socialFacebook: socialFacebook.trim() || initialSiteSettings.socialFacebook,
@@ -1183,6 +1232,17 @@ Tim Garut Journey`
 
             <button
               type="button"
+              onClick={() => setActiveTab('legalitas')}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition flex items-center gap-1.5 shrink-0 ${
+                activeTab === 'legalitas' ? 'bg-forest text-white' : 'bg-ink/5 text-ink/75 hover:bg-ink/10'
+              }`}
+            >
+              <FileCheck className="h-3.5 w-3.5 text-ember" />
+              <span>Dokumen Legalitas &amp; PT</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setActiveTab('seo')}
               className={`rounded-full px-3 py-1.5 text-xs font-semibold transition flex items-center gap-1.5 shrink-0 ${
                 activeTab === 'seo' ? 'bg-forest text-white' : 'bg-ink/5 text-ink/75 hover:bg-ink/10'
@@ -1299,6 +1359,8 @@ Tim Garut Journey`
                   ? 'Kelola Kuliner, Galeri Foto, Pengalaman & Banner'
                   : activeTab === 'settings'
                   ? 'Pengaturan & Edit Seluruh Bagian Website'
+                  : activeTab === 'legalitas'
+                  ? 'Dokumen Legalitas, Akreditasi Resmi & Profil PT'
                   : activeTab === 'seo'
                   ? 'Optimasi SEO & Peringkat Google Mesin Pencari'
                   : activeTab === 'whatsapp_settings'
@@ -3280,59 +3342,116 @@ Tim Garut Journey`
           <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
             <form onSubmit={handleSaveSettings} className="space-y-8">
               {/* Card 00: Ganti Logo & Branding Website */}
+              {/* Card 00: Ganti Logo & Branding Website (Header & Mobile Tanpa Background) */}
               <div className="rounded-3xl bg-white p-6 sm:p-8 shadow-soft border border-ink/5 space-y-6">
                 <div className="border-b border-ink/10 pb-4">
                   <span className="text-xs font-bold uppercase tracking-widest text-ember">
                     00 &bull; Logo & Branding Visual Website
                   </span>
                   <h2 className="font-display text-2xl font-semibold text-forest mt-1">
-                    Ganti Logo Website (Header, Footer & Mobile)
+                    Ganti Logo Header &amp; Branding (Mode Tanpa Background)
                   </h2>
                   <p className="text-xs text-ink/65 mt-1">
-                    Gunakan logo ikon SVG bawaan atau unggah/tautkan URL gambar logo khusus bisnis Anda.
+                    Sesuaikan logo di header navigasi, mobile drawer, dan footer. Dilengkapi fitur pembersih latar belakang otomatis agar logo tampil transparan bersih tanpa kotak putih.
                   </p>
                 </div>
 
-                {/* Preview Logo Saat Ini */}
-                <div className="rounded-2xl border border-ink/10 bg-cream/30 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <span className="text-[0.65rem] font-bold uppercase tracking-wider text-ink/50 block mb-1">
-                      Preview Logo Website Saat Ini:
-                    </span>
-                    <div className="flex items-center gap-3 p-3 bg-forest rounded-2xl w-fit">
-                      {logoType === 'custom' && customLogoUrl ? (
-                        <img
-                          src={customLogoUrl}
-                          alt="Preview Logo"
-                          style={{ height: `${logoHeight}px` }}
-                          className="w-auto object-contain max-w-[180px]"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
-                      ) : (
-                        <span className="flex items-center gap-2.5 text-cream">
+                {/* Preview Logo Saat Ini (Di Atas Hero Gelap & Di Header Terang) */}
+                <div className="rounded-2xl border border-ink/10 bg-cream/30 p-5 space-y-3">
+                  <span className="text-[0.65rem] font-bold uppercase tracking-wider text-ink/50 block">
+                    Preview Logo Website di Header (Tanpa Latar Belakang):
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Tampilan di Header Atas Hero (Background Gelap) */}
+                    <div className="p-4 bg-forest rounded-2xl border border-forest-700">
+                      <span className="text-[0.65rem] font-bold uppercase tracking-wider text-cream/60 block mb-2">
+                        1. Di Header Transparan (Atas Banner Hero):
+                      </span>
+                      <div className="flex items-center gap-3">
+                        {logoType === 'custom' && customLogoUrl ? (
+                          <img
+                            src={customLogoUrl}
+                            alt="Preview Logo Header"
+                            style={{ height: `${logoHeight}px` }}
+                            className="w-auto object-contain max-w-[160px] drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
+                          />
+                        ) : (
                           <svg viewBox="0 0 32 32" className="h-8 w-8 shrink-0" aria-hidden="true">
                             <circle cx="16" cy="16" r="16" className="fill-ember" />
                             <path d="M5 23 L12.5 12 L17 18 L20 14 L27 23 Z" className="fill-cream" />
                             <circle cx="21.5" cy="9.5" r="2.5" className="fill-cream" />
                           </svg>
-                          <span className="flex flex-col">
-                            <span className="font-display text-base font-semibold leading-none tracking-wider text-cream">
-                              {siteName || 'GARUT'} <span className="text-ember">JOURNEY</span>
-                            </span>
-                            <span className="text-[0.55rem] font-bold uppercase tracking-widest text-ember mt-0.5">
-                              {siteSubtitle || 'Explore Swiss van Java'}
-                            </span>
+                        )}
+                        <span className="flex flex-col">
+                          <span className="font-display text-sm font-semibold leading-none tracking-wider text-cream">
+                            {siteName || 'GARUT JOURNEY'}
+                          </span>
+                          <span className="text-[0.5rem] font-bold uppercase tracking-widest text-ember mt-0.5">
+                            {siteSubtitle || 'Explore Swiss van Java'}
                           </span>
                         </span>
-                      )}
+                      </div>
+                    </div>
+
+                    {/* Tampilan di Header Scrolled (Background Cream Terang) */}
+                    <div className="p-4 bg-cream rounded-2xl border border-ink/10">
+                      <span className="text-[0.65rem] font-bold uppercase tracking-wider text-ink/50 block mb-2">
+                        2. Di Header Sticky (Saat Halaman Di-scroll):
+                      </span>
+                      <div className="flex items-center gap-3">
+                        {logoType === 'custom' && customLogoUrl ? (
+                          <img
+                            src={customLogoUrl}
+                            alt="Preview Logo Scrolled"
+                            style={{ height: `${logoHeight}px` }}
+                            className="w-auto object-contain max-w-[160px]"
+                          />
+                        ) : (
+                          <svg viewBox="0 0 32 32" className="h-8 w-8 shrink-0" aria-hidden="true">
+                            <circle cx="16" cy="16" r="16" className="fill-ember" />
+                            <path d="M5 23 L12.5 12 L17 18 L20 14 L27 23 Z" className="fill-forest" />
+                            <circle cx="21.5" cy="9.5" r="2.5" className="fill-cream" />
+                          </svg>
+                        )}
+                        <span className="flex flex-col">
+                          <span className="font-display text-sm font-semibold leading-none tracking-wider text-ink">
+                            {siteName || 'GARUT JOURNEY'}
+                          </span>
+                          <span className="text-[0.5rem] font-bold uppercase tracking-widest text-ember mt-0.5">
+                            {siteSubtitle || 'Explore Swiss van Java'}
+                          </span>
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="text-xs text-ink/60 max-w-xs">
-                    <p>Format yang disarankan: PNG transparan atau SVG dengan rasio lebar (landscape).</p>
-                  </div>
+                  {logoType === 'custom' && customLogoUrl && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-ink/10">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="logoRemoveBgCheckbox"
+                          checked={logoRemoveBg}
+                          onChange={(e) => setLogoRemoveBg(e.target.checked)}
+                          className="accent-forest rounded h-4 w-4 cursor-pointer"
+                        />
+                        <label htmlFor="logoRemoveBgCheckbox" className="text-xs font-semibold text-ink/80 cursor-pointer">
+                          Otomatis Bersihkan Background Putih (Tanpa Background)
+                        </label>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleMakeLogoTransparent}
+                        disabled={logoUploading}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-forest/10 hover:bg-forest text-forest hover:text-white px-3 py-1.5 text-xs font-bold transition"
+                        title="Jadikan logo transparan dengan menghapus warna latar putih"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        <span>Hapus Background Putih Sekarang</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Pilihan Jenis Logo */}
@@ -3365,9 +3484,9 @@ Tim Garut Journey`
                           : 'border-ink/15 bg-cream/20 text-ink/75 hover:bg-cream/50'
                       }`}
                     >
-                      <span className="block text-xs font-bold">2. Logo Gambar Kustom (URL)</span>
+                      <span className="block text-xs font-bold">2. Logo Gambar Kustom (URL / Upload)</span>
                       <span className="text-[0.65rem] text-ink/50 block mt-1">
-                        Gunakan file gambar logo brand Anda sendiri
+                        Gunakan file gambar logo brand Anda sendiri tanpa background
                       </span>
                     </button>
                   </div>
@@ -3390,7 +3509,7 @@ Tim Garut Journey`
                         />
                         <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-ember px-3.5 py-2.5 text-xs font-bold text-white hover:bg-ember-600 transition shrink-0">
                           <Upload className="h-4 w-4" />
-                          <span>{logoUploading ? '...' : 'Upload Logo'}</span>
+                          <span>{logoUploading ? 'Memproses...' : 'Upload Logo'}</span>
                           <input
                             type="file"
                             accept="image/jpeg,image/png,image/webp,image/jpg,image/svg+xml,image/*"
@@ -3400,7 +3519,7 @@ Tim Garut Journey`
                         </label>
                       </div>
                       <p className="mt-1 text-[0.65rem] text-ink/50">
-                        Mendukung upload langsung file PNG transparan, WebP, SVG, atau JPG dari komputer/smartphone Anda.
+                        Sistem otomatis menghapus latar belakang putih file JPG/PNG sehingga logo langsung transparan tanpa kotak putih di header.
                       </p>
                     </div>
 
@@ -3422,6 +3541,176 @@ Tim Garut Journey`
                   </div>
                 )}
               </div>
+
+              {/* Card 00.B: Ganti Favicon / Ikon Tab Browser (Gambar ke-2) */}
+              <div className="rounded-3xl bg-white p-6 sm:p-8 shadow-soft border border-ink/5 space-y-6">
+                <div className="border-b border-ink/10 pb-4">
+                  <span className="text-xs font-bold uppercase tracking-widest text-ember">
+                    00.B &bull; Ikon Tab Browser (Favicon)
+                  </span>
+                  <h2 className="font-display text-2xl font-semibold text-forest mt-1">
+                    Ganti Logo Tab Browser (Favicon pada Gambar ke-2)
+                  </h2>
+                  <p className="text-xs text-ink/65 mt-1">
+                    Atur logo kecil yang muncul di tab browser pengguna saat membuka website Garut Journey.
+                  </p>
+                </div>
+
+                {/* Mockup Tab Browser Realistis (Persis Gambar ke-2) */}
+                <div className="rounded-2xl border border-ink/10 bg-sky-50/60 p-5 space-y-2">
+                  <span className="text-[0.65rem] font-bold uppercase tracking-wider text-ink/50 block">
+                    Simulasi Tampilan Tab Browser Anda:
+                  </span>
+
+                  {/* Browser Tab Mock */}
+                  <div className="flex items-center gap-2 max-w-sm rounded-t-2xl bg-white border border-b-0 border-ink/15 px-3.5 py-2.5 shadow-sm">
+                    {/* Favicon Icon */}
+                    <div className="shrink-0 h-5 w-5 rounded-full overflow-hidden flex items-center justify-center">
+                      {faviconType === 'same-as-logo' && customLogoUrl ? (
+                        <img src={customLogoUrl} alt="Favicon" className="h-4 w-4 object-contain" />
+                      ) : faviconType === 'custom' && faviconUrl ? (
+                        <img src={faviconUrl} alt="Favicon" className="h-4 w-4 object-contain" />
+                      ) : (
+                        <svg viewBox="0 0 32 32" className="h-5 w-5" aria-hidden="true">
+                          <circle cx="16" cy="16" r="16" fill="#D8893B" />
+                          <path d="M5 23 L12.5 12 L17 18 L20 14 L27 23 Z" fill="#1F5D42" />
+                          <circle cx="21.5" cy="9.5" r="2.5" fill="#F5EFE3" />
+                        </svg>
+                      )}
+                    </div>
+
+                    {/* Tab Title text */}
+                    <span className="text-xs font-medium text-ink/90 truncate flex-1">
+                      {siteName || 'Garut Journey'} — Explore Destinasi...
+                    </span>
+
+                    {/* Close Tab Icon */}
+                    <span className="text-ink/40 hover:text-ink text-xs font-bold px-1 rounded hover:bg-ink/5 cursor-pointer">
+                      &times;
+                    </span>
+                  </div>
+                  <div className="h-2 bg-white border-t border-ink/15 -mt-px rounded-b-lg" />
+                </div>
+
+                {/* Pilihan Sumber Favicon */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-ink/70 mb-2">
+                    Pilihan Ikon Tab Browser:
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFaviconType('default')
+                        setFaviconUrl('/favicon.svg')
+                      }}
+                      className={`rounded-2xl p-3.5 text-left border transition ${
+                        faviconType === 'default'
+                          ? 'border-forest bg-forest/10 ring-2 ring-forest text-forest font-bold shadow-sm'
+                          : 'border-ink/15 bg-cream/20 text-ink/75 hover:bg-cream/50'
+                      }`}
+                    >
+                      <span className="block text-xs font-bold">1. Ikon Bawaan (Gambar 2)</span>
+                      <span className="text-[0.65rem] text-ink/50 block mt-0.5">
+                        Ikon lingkaran matahari &amp; gunung khas Priangan
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setFaviconType('same-as-logo')}
+                      className={`rounded-2xl p-3.5 text-left border transition ${
+                        faviconType === 'same-as-logo'
+                          ? 'border-forest bg-forest/10 ring-2 ring-forest text-forest font-bold shadow-sm'
+                          : 'border-ink/15 bg-cream/20 text-ink/75 hover:bg-cream/50'
+                      }`}
+                    >
+                      <span className="block text-xs font-bold">2. Sama dengan Logo Web</span>
+                      <span className="text-[0.65rem] text-ink/50 block mt-0.5">
+                        Gunakan logo kustom yang sedang aktif di header
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setFaviconType('custom')}
+                      className={`rounded-2xl p-3.5 text-left border transition ${
+                        faviconType === 'custom'
+                          ? 'border-forest bg-forest/10 ring-2 ring-forest text-forest font-bold shadow-sm'
+                          : 'border-ink/15 bg-cream/20 text-ink/75 hover:bg-cream/50'
+                      }`}
+                    >
+                      <span className="block text-xs font-bold">3. Upload Favicon Kustom</span>
+                      <span className="text-[0.65rem] text-ink/50 block mt-0.5">
+                        Upload file ikon (.ico, .png, .svg) khusus
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Upload Favicon Input */}
+                {faviconType === 'custom' && (
+                  <div className="space-y-3 pt-2 border-t border-ink/10 animate-fade-in">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                        Upload File Favicon atau Masukkan URL Ikon *
+                      </label>
+                      <div className="mt-1.5 flex gap-2">
+                        <input
+                          type="text"
+                          value={faviconUrl}
+                          onChange={(e) => setFaviconUrl(e.target.value)}
+                          placeholder="Masukkan URL favicon (.png, .svg, .ico)..."
+                          className="flex-1 rounded-xl border border-ink/15 bg-white px-4 py-2.5 text-xs text-ink font-mono focus:border-forest focus:outline-none"
+                        />
+                        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-forest px-3.5 py-2.5 text-xs font-bold text-white hover:bg-forest-700 transition shrink-0">
+                          <Upload className="h-4 w-4" />
+                          <span>{faviconUploading ? 'Memproses...' : 'Upload Favicon'}</span>
+                          <input
+                            type="file"
+                            accept="image/x-icon,image/vnd.microsoft.icon,image/png,image/svg+xml,image/webp,image/*"
+                            onChange={handleFaviconFileUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                      <p className="mt-1 text-[0.65rem] text-ink/50">
+                        Format disarankan: file persegi (rasio 1:1) PNG transparan, ICO, atau SVG.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Card 00.C: Pintasan Dokumen Legalitas & Akreditasi PT */}
+              <div className="rounded-3xl bg-gradient-to-r from-forest/10 via-cream/30 to-ember/10 p-6 sm:p-7 border border-forest/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+                <div className="flex items-start gap-3.5">
+                  <div className="grid h-11 w-11 place-items-center rounded-2xl bg-forest text-cream shrink-0 shadow-soft">
+                    <FileCheck className="h-5 w-5 text-ember" />
+                  </div>
+                  <div>
+                    <span className="text-[0.7rem] font-bold uppercase tracking-widest text-forest">
+                      Dokumen Legalitas &amp; Akreditasi PT
+                    </span>
+                    <h3 className="font-display text-lg font-bold text-ink mt-0.5">
+                      Kelola NIB, SK Kemenkumham, ASITA &amp; Rekening Resmi
+                    </h3>
+                    <p className="text-xs text-ink/70 mt-1 max-w-xl">
+                      Ubah data perizinan resmi biro wisata, kemitraan guide HPI, nomor rekening resmi perusahaan, dan statistik profil PT.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('legalitas')}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-forest hover:bg-forest-700 text-cream px-5 py-3 text-xs font-bold shadow-soft transition shrink-0"
+                >
+                  <FileCheck className="h-4 w-4 text-ember" />
+                  <span>Buka Editor Dokumen Legalitas</span>
+                </button>
+              </div>
+
 
               {/* Card 1: Identitas & Kontak Resmi */}
               <div className="rounded-3xl bg-white p-6 sm:p-8 shadow-soft border border-ink/5 space-y-5">
@@ -4286,6 +4575,11 @@ Tim Garut Journey`
             </form>
           </div>
         )}
+
+        {/* ======================================= */}
+        {/* TAB: DOKUMEN LEGALITAS & PROFIL PT      */}
+        {/* ======================================= */}
+        {activeTab === 'legalitas' && <CompanyLegalManager />}
 
         {/* ======================================= */}
         {/* TAB: OPTIMASI SEO & GOOGLE RANKING     */}

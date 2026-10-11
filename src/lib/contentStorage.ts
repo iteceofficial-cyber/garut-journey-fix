@@ -109,10 +109,13 @@ export function resetCulinaryToDefault(): Dish[] {
 }
 
 export function useCulinary(): Dish[] {
-  const [list, setList] = useState<Dish[]>(() => getStoredCulinary())
+  const [list, setList] = useState<Dish[]>(defaultDishes)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+
+    // Sync client-stored culinary after hydration
+    setList(getStoredCulinary())
 
     const sync = () => setList(getStoredCulinary())
     window.addEventListener('gj:culinary-change', sync)
@@ -258,10 +261,13 @@ export function resetGalleryToDefault(): GalleryItem[] {
 }
 
 export function useGallery(): GalleryItem[] {
-  const [list, setList] = useState<GalleryItem[]>(() => getStoredGallery())
+  const [list, setList] = useState<GalleryItem[]>(() => withIds(defaultGallery))
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+
+    // Sync client-stored gallery after hydration
+    setList(getStoredGallery())
 
     const sync = () => setList(getStoredGallery())
     window.addEventListener('gj:gallery-change', sync)
@@ -394,10 +400,13 @@ export function resetExperiencesToDefault(): Experience[] {
 }
 
 export function useExperiences(): Experience[] {
-  const [list, setList] = useState<Experience[]>(() => getStoredExperiences())
+  const [list, setList] = useState<Experience[]>(defaultExperiences)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+
+    // Sync client-stored experiences after hydration
+    setList(getStoredExperiences())
 
     const sync = () => setList(getStoredExperiences())
     window.addEventListener('gj:experiences-change', sync)

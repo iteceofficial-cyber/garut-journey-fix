@@ -104,12 +104,15 @@ export function resetArticlesStorage(): void {
 
 /** React hook for live articles state */
 export function useArticles() {
-  const [items, setItems] = useState<Article[]>(() => getStoredArticles())
+  const [items, setItems] = useState<Article[]>(defaultArticles)
   const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
     setIsClient(true)
     if (typeof window === 'undefined') return
+
+    // Sync client-stored articles after hydration
+    setItems(getStoredArticles())
 
     const handleUpdate = () => {
       setItems(getStoredArticles())

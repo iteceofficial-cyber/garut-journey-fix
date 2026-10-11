@@ -25,6 +25,10 @@ export interface SiteSettings {
   customLogoUrl?: string
   logoType?: 'default' | 'custom'
   logoHeight?: number
+  logoRemoveBg?: boolean
+  // Favicon (Tab Icon) Customization
+  faviconType?: 'default' | 'custom' | 'same-as-logo'
+  faviconUrl?: string
   // Social Links
   socialInstagram: string
   socialTikTok: string
@@ -98,6 +102,9 @@ export const initialSiteSettings: SiteSettings = {
   customLogoUrl: '',
   logoType: 'default',
   logoHeight: 36,
+  logoRemoveBg: true,
+  faviconType: 'default',
+  faviconUrl: '/favicon.svg',
   socialInstagram: defaultSite.socials.instagram,
   socialTikTok: defaultSite.socials.tiktok,
   socialFacebook: defaultSite.socials.facebook,
@@ -188,10 +195,13 @@ export async function saveSiteSettings(settings: Partial<SiteSettings>): Promise
 }
 
 export function useSiteSettings() {
-  const [settings, setSettings] = useState<SiteSettings>(() => getStoredSiteSettings())
+  const [settings, setSettings] = useState<SiteSettings>(initialSiteSettings)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+
+    // Synchronize client-stored settings after hydration
+    setSettings(getStoredSiteSettings())
 
     const handler = () => setSettings(getStoredSiteSettings())
     window.addEventListener(SETTINGS_EVENT, handler)

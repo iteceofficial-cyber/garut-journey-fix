@@ -9,6 +9,7 @@ import { useLanguage } from '@/lib/i18n'
 import { trackPageView } from '@/lib/trafficTracker'
 import { scrollToSection } from '@/lib/nav'
 import { useSeoSettings } from '@/lib/seoSettings'
+import { useSiteSettings } from '@/lib/siteSettings'
 
 import '../styles.css'
 
@@ -73,37 +74,54 @@ function NotFound() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const routerState = useRouterState()
-  const routerPath = routerState?.location?.pathname || ''
-  const windowPath = typeof window !== 'undefined' ? window.location.pathname : ''
-  const pathname = routerPath || windowPath || ''
-  const isKwitansi =
-    pathname.startsWith('/kwitansi') ||
-    pathname.includes('/kwitansi') ||
-    windowPath.startsWith('/kwitansi') ||
-    windowPath.includes('/kwitansi')
+  const pathname = routerState?.location?.pathname || ''
+  const isKwitansi = pathname.startsWith('/kwitansi')
   const isBrowserAdmin =
     pathname.startsWith('/admin') ||
     pathname.startsWith('/wp-admin') ||
-    pathname.startsWith('/login') ||
-    windowPath.startsWith('/admin') ||
-    windowPath.startsWith('/wp-admin') ||
-    windowPath.startsWith('/login')
+    pathname.startsWith('/login')
   const isAdminPage = isKwitansi || Boolean(isBrowserAdmin)
   const { lang, isRtl } = useLanguage()
 
   const { seo } = useSeoSettings()
+  const { settings } = useSiteSettings()
 
   // Track page views for WP Admin Traffic Analytics
   useEffect(() => {
     trackPageView(pathname)
   }, [pathname])
 
-  // Dynamically synchronize SEO metadata & Schema.org JSON-LD from database
+  // Dynamically synchronize SEO metadata, Schema.org JSON-LD & Favicon from database
   useEffect(() => {
     if (typeof document === 'undefined' || isAdminPage) return
 
     if (seo.metaTitle) {
       document.title = seo.metaTitle
+    }
+
+    // Dynamic browser tab favicon (Gambar ke-2)
+    const activeFavicon =
+      settings.faviconType === 'custom' && settings.faviconUrl
+        ? settings.faviconUrl
+        : settings.faviconType === 'same-as-logo' && settings.customLogoUrl
+        ? settings.customLogoUrl
+        : settings.faviconUrl || '/favicon.svg'
+
+    if (activeFavicon) {
+      let favEl = document.querySelector('link[rel="icon"]') as HTMLLinkElement | null
+      if (!favEl) {
+        favEl = document.createElement('link')
+        favEl.setAttribute('rel', 'icon')
+        document.head.appendChild(favEl)
+      }
+      favEl.setAttribute('href', activeFavicon)
+      if (activeFavicon.endsWith('.svg') || activeFavicon.startsWith('data:image/svg+xml')) {
+        favEl.setAttribute('type', 'image/svg+xml')
+      } else if (activeFavicon.endsWith('.ico')) {
+        favEl.setAttribute('type', 'image/x-icon')
+      } else {
+        favEl.setAttribute('type', 'image/png')
+      }
     }
 
     const setMeta = (nameOrProperty: string, content: string, isProperty = false) => {
@@ -188,11 +206,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const isHomePage = pathname === '/'
 
   return (
-    <html lang={lang} dir={isRtl ? 'rtl' : 'ltr'}>
+    <html lang={lang} dir={isRtl ? 'rtl' : 'ltr'} suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
-      <body id="top">
+      <body id="top" suppressHydrationWarning>
         {!isAdminPage && <SiteHeader overHero={isHomePage} />}
         <main id="main">{children}</main>
         {!isAdminPage && <SiteFooter />}

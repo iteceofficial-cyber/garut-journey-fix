@@ -100,10 +100,13 @@ export function resetTestimonialsToDefault(): Testimonial[] {
 }
 
 export function useTestimonials(): Testimonial[] {
-  const [list, setList] = useState<Testimonial[]>(() => getStoredTestimonials())
+  const [list, setList] = useState<Testimonial[]>(defaultTestimonials)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+
+    // Sync client-stored testimonials after hydration
+    setList(getStoredTestimonials())
 
     const sync = () => setList(getStoredTestimonials())
     window.addEventListener('gj:testimonials-change', sync)

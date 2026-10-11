@@ -124,6 +124,20 @@
         "updatedAt": { "type": "string", "description": "Last updated timestamp", "maxLength": 50 }
       },
       "required": ["whatsappAdmin"]
+    },
+    "CompanyProfile": {
+      "title": "CompanyProfile",
+      "description": "Company legal entity, NIB, licenses, and official bank accounts",
+      "type": "object",
+      "properties": {
+        "legalName": { "type": "string", "description": "Legal company name", "maxLength": 200 },
+        "nib": { "type": "string", "description": "Business identification number", "maxLength": 200 },
+        "skKemenkumham": { "type": "string", "description": "Ministry legal deed endorsement", "maxLength": 200 },
+        "asitaMembership": { "type": "string", "description": "ASITA membership number", "maxLength": 200 },
+        "hpiPartnership": { "type": "string", "description": "HPI tourist guide association license", "maxLength": 200 },
+        "updatedAt": { "type": "string", "description": "Last updated timestamp", "maxLength": 50 }
+      },
+      "required": ["legalName", "nib"]
     }
   },
   "firestore": {

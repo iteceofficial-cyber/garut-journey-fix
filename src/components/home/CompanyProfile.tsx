@@ -9,11 +9,11 @@ import {
   Users,
 } from 'lucide-react'
 import { Reveal, SectionHeading } from '@/components/Reveal'
-import { COMPANY_PROFILE } from '@/data/company'
+import { useCompanyProfile } from '@/lib/companyStorage'
 import { whatsappLink } from '@/data/site'
 
 export function CompanyProfile() {
-  const p = COMPANY_PROFILE
+  const { profile: p } = useCompanyProfile()
 
   return (
     <section id="company-profile" className="relative bg-cream-200/50 py-24 sm:py-32">
@@ -40,8 +40,10 @@ export function CompanyProfile() {
         {/* Stats Strip */}
         <div className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:gap-6">
           <Reveal delay={50} className="rounded-3xl bg-white p-6 shadow-soft text-center border border-ink/5">
-            <span className="font-display text-4xl sm:text-5xl font-light text-forest">
-              {p.stats.travelersServed.toLocaleString()}+
+            <span suppressHydrationWarning className="font-display text-4xl sm:text-5xl font-light text-forest">
+              {typeof p.stats.travelersServed === 'number'
+                ? p.stats.travelersServed.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+                : p.stats.travelersServed}+
             </span>
             <p className="mt-2 text-xs font-bold uppercase tracking-wider text-ink/60">Wisatawan Terlayani</p>
           </Reveal>

@@ -179,3 +179,158 @@ export function readAndCompressImage(file: File, maxWidth = 860, quality = 0.72)
     }
   })
 }
+
+/**
+ * Strips white and near-white background from an image URL or Data URL
+ * and returns a clean transparent PNG Data URL.
+ */
+export function removeWhiteBackgroundFromImage(
+  imageSrc: string,
+  tolerance = 32
+): Promise<string> {
+  return new Promise((resolve) => {
+    if (!imageSrc) return resolve('')
+    if (typeof window === 'undefined') return resolve(imageSrc)
+
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+
+    img.onload = () => {
+      try {
+        const width = img.naturalWidth || img.width
+        const height = img.naturalHeight || img.height
+        if (!width || !height) return resolve(imageSrc)
+
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return resolve(imageSrc)
+
+        ctx.drawImage(img, 0, 0)
+        const imgData = ctx.getImageData(0, 0, width, height)
+        const d = imgData.data
+
+        const threshold = 255 - tolerance
+
+        for (let i = 0; i < d.length; i += 4) {
+          const r = d[i]
+          const g = d[i + 1]
+          const b = d[i + 2]
+          const a = d[i + 3]
+
+          if (a === 0) continue
+
+          if (r >= threshold && g >= threshold && b >= threshold) {
+            const minC = Math.min(r, g, b)
+            const factor = (minC - threshold) / tolerance
+            d[i + 3] = Math.max(0, Math.round(a * (1 - factor * factor)))
+          }
+        }
+
+        ctx.putImageData(imgData, 0, 0)
+        resolve(canvas.toDataURL('image/png'))
+      } catch (err) {
+        console.warn('Canvas background removal fallback:', err)
+        resolve(imageSrc)
+      }
+    }
+
+    img.onerror = () => resolve(imageSrc)
+    img.src = imageSrc
+  })
+}
+
+/**
+ * Reads, resizes, and processes a logo or favicon file into a transparent PNG Data URL.
+ * Preserves transparency and removes white solid backgrounds if requested.
+ */
+export function readAndCompressLogo(
+  file: File,
+  options: { removeWhiteBg?: boolean; maxWidth?: number; isFavicon?: boolean } = {}
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!file) return reject(new Error('File tidak ditemukan.'))
+
+    const { removeWhiteBg = true, maxWidth = options.isFavicon ? 128 : 480, isFavicon = false } = options
+    const reader = new FileReader()
+
+    reader.onerror = () => reject(new Error('Gagal membaca file gambar logo.'))
+    reader.onload = () => {
+      const src = String(reader.result || '')
+      const img = new Image()
+
+      img.onload = () => {
+        try {
+          const origW = img.naturalWidth || img.width || 100
+          const origH = img.naturalHeight || img.height || 100
+
+          let targetW = origW
+          let targetH = origH
+
+          if (isFavicon) {
+            const side = Math.min(maxWidth, Math.max(origW, origH, 64))
+            targetW = side
+            targetH = side
+          } else if (origW > maxWidth || origH > maxWidth) {
+            const ratio = Math.min(maxWidth / origW, maxWidth / origH)
+            targetW = Math.max(1, Math.round(origW * ratio))
+            targetH = Math.max(1, Math.round(origH * ratio))
+          }
+
+          const canvas = document.createElement('canvas')
+          canvas.width = targetW
+          canvas.height = targetH
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return resolve(src)
+
+          // Transparent background - do NOT fill with white!
+          ctx.clearRect(0, 0, targetW, targetH)
+
+          if (isFavicon) {
+            const scale = Math.min(targetW / origW, targetH / origH)
+            const drawW = origW * scale
+            const drawH = origH * scale
+            const drawX = (targetW - drawW) / 2
+            const drawY = (targetH - drawH) / 2
+            ctx.drawImage(img, drawX, drawY, drawW, drawH)
+          } else {
+            ctx.drawImage(img, 0, 0, targetW, targetH)
+          }
+
+          if (removeWhiteBg) {
+            const imgData = ctx.getImageData(0, 0, targetW, targetH)
+            const d = imgData.data
+            const tolerance = 32
+            const threshold = 255 - tolerance
+
+            for (let i = 0; i < d.length; i += 4) {
+              const r = d[i]
+              const g = d[i + 1]
+              const b = d[i + 2]
+              const a = d[i + 3]
+              if (a === 0) continue
+
+              if (r >= threshold && g >= threshold && b >= threshold) {
+                const minC = Math.min(r, g, b)
+                const factor = (minC - threshold) / tolerance
+                d[i + 3] = Math.max(0, Math.round(a * (1 - factor * factor)))
+              }
+            }
+            ctx.putImageData(imgData, 0, 0)
+          }
+
+          resolve(canvas.toDataURL('image/png'))
+        } catch {
+          resolve(src)
+        }
+      }
+
+      img.onerror = () => resolve(src)
+      img.src = src
+    }
+
+    reader.readAsDataURL(file)
+  })
+}
+

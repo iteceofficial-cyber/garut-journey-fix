@@ -181,20 +181,6 @@ export const articles: Article[] = [
 ]
 
 export function getArticle(slug: string): Article | undefined {
-  if (typeof window !== 'undefined') {
-    try {
-      const raw = localStorage.getItem('garut_journey_articles_v2')
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed)) {
-          const found = parsed.find((a: Article) => a.slug === slug)
-          if (found) return found
-        }
-      }
-    } catch {
-      // fallback
-    }
-  }
   return articles.find((a) => a.slug === slug)
 }
 

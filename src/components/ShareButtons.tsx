@@ -1,10 +1,19 @@
 import { Check, Facebook, Link2, Twitter } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { WhatsAppIcon } from './WhatsAppFab'
+import { site } from '@/data/site'
 
 export function ShareButtons({ title, path }: { title: string; path: string }) {
   const [copied, setCopied] = useState(false)
-  const url = typeof window !== 'undefined' ? window.location.origin + path : path
+  const defaultUrl = `${site.url}${path.startsWith('/') ? path : `/${path}`}`
+  const [url, setUrl] = useState<string>(defaultUrl)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setUrl(`${window.location.origin}${path.startsWith('/') ? path : `/${path}`}`)
+    }
+  }, [path])
+
   const text = `${title} — Garut Journey`
   const items = [
     { label: 'Share on WhatsApp', href: `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`, icon: <WhatsAppIcon className="h-4 w-4" /> },

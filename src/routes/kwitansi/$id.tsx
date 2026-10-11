@@ -19,7 +19,7 @@ import {
   INITIAL_BOOKINGS,
   type Booking,
 } from '@/lib/bookingsStorage'
-import { COMPANY_PROFILE } from '@/data/company'
+import { useCompanyProfile, type CompanyProfileData } from '@/lib/companyStorage'
 import { angkaKeTerbilang } from '@/lib/terbilang'
 import { whatsappLink } from '@/data/site'
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore'
@@ -36,20 +36,18 @@ function KwitansiDetailPage() {
   const rawId = cleanId.replace(/^KW-/i, '')
 
   const [booking, setBooking] = useState<Booking | null>(() => {
-    const list = getStoredBookings()
     return (
-      list.find((b) => b.id.toLowerCase() === rawId.toLowerCase() || b.id.toLowerCase() === cleanId.toLowerCase()) ||
       INITIAL_BOOKINGS.find((b) => b.id.toLowerCase() === rawId.toLowerCase() || b.id.toLowerCase() === cleanId.toLowerCase()) ||
       null
     )
   })
-  const [loading, setLoading] = useState(() => !booking)
+  const [loading, setLoading] = useState(true)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [downloadSuccess, setDownloadSuccess] = useState(false)
   const [blobUrl, setPdfBlobUrl] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [searchId, setSearchId] = useState('')
-  const [allBookings, setAllBookings] = useState<Booking[]>(() => getStoredBookings())
+  const [allBookings, setAllBookings] = useState<Booking[]>(INITIAL_BOOKINGS)
 
   useEffect(() => {
     let isMounted = true
@@ -128,7 +126,7 @@ function KwitansiDetailPage() {
     }
   }, [id])
 
-function generateVectorKwitansiPdf(booking: Booking, profile: typeof COMPANY_PROFILE) {
+function generateVectorKwitansiPdf(booking: Booking, profile: CompanyProfileData) {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -383,7 +381,7 @@ function generateVectorKwitansiPdf(booking: Booking, profile: typeof COMPANY_PRO
   return doc
 }
 
-  const p = COMPANY_PROFILE
+  const { profile: p } = useCompanyProfile()
 
   const isIOS =
     typeof navigator !== 'undefined' &&

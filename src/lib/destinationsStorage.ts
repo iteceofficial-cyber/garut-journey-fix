@@ -66,10 +66,13 @@ export async function saveTourPrice(tourName: string, price: number): Promise<bo
 }
 
 export function useTourPrices() {
-  const [prices, setPrices] = useState<Record<string, number>>(() => getStoredTourPrices())
+  const [prices, setPrices] = useState<Record<string, number>>(DEFAULT_TOUR_PRICES)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+
+    // Sync client-stored prices after hydration
+    setPrices(getStoredTourPrices())
 
     const handler = () => setPrices(getStoredTourPrices())
     window.addEventListener(PRICES_EVENT, handler)
@@ -180,10 +183,13 @@ export async function deleteDestination(slug: string): Promise<boolean> {
 }
 
 export function useDestinations() {
-  const [destinationsList, setDestinationsList] = useState<Destination[]>(() => getStoredDestinations())
+  const [destinationsList, setDestinationsList] = useState<Destination[]>(defaultDestinations)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+
+    // Sync client-stored destinations after hydration
+    setDestinationsList(getStoredDestinations())
 
     const handler = () => setDestinationsList(getStoredDestinations())
     window.addEventListener(DESTINATIONS_EVENT, handler)

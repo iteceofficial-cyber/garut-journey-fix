@@ -171,9 +171,7 @@ function MoreDropdown({ solid }: { solid: boolean }) {
 /** Sticky navigation with dynamic language, animation and mobile drawer. */
 export function SiteHeader({ overHero = false }: { overHero?: boolean }) {
   const routerState = useRouterState()
-  const pathname =
-    routerState.location?.pathname ||
-    (typeof window !== 'undefined' ? window.location.pathname : '')
+  const pathname = routerState?.location?.pathname || ''
 
   const isHidden =
     pathname.startsWith('/admin') ||

@@ -101,10 +101,13 @@ export function resetCityToursToDefault(): CityTour[] {
 }
 
 export function useCityTours(): CityTour[] {
-  const [list, setList] = useState<CityTour[]>(() => getStoredCityTours())
+  const [list, setList] = useState<CityTour[]>(defaultCityTours)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+
+    // Sync client-stored tours after hydration
+    setList(getStoredCityTours())
 
     const sync = () => setList(getStoredCityTours())
     window.addEventListener('gj:tours-change', sync)
@@ -231,10 +234,13 @@ export function resetPackagesToDefault(): TourPackage[] {
 }
 
 export function useTourPackages(): TourPackage[] {
-  const [list, setList] = useState<TourPackage[]>(() => getStoredPackages())
+  const [list, setList] = useState<TourPackage[]>(defaultPackages)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+
+    // Sync client-stored tour packages after hydration
+    setList(getStoredPackages())
 
     const sync = () => setList(getStoredPackages())
     window.addEventListener('gj:packages-change', sync)

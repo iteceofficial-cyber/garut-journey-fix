@@ -158,8 +158,7 @@ export function Hero() {
       : 'bg-gradient-to-b from-ink/65 via-ink/20 to-ink/90'
 
   return (
-    <section id="top" aria-label="Welcome" className="relative isolate flex min-h-[100svh] items-end overflow-hidden bg-ink text-cream">
-      <div id="main" className="sr-only" />
+    <section id="hero" aria-label="Welcome" className="relative isolate flex min-h-[100svh] items-end overflow-hidden bg-ink text-cream">
       {/* Dynamic Background Image controlled by WP Admin */}
       <div
         ref={bg}
