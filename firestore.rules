@@ -27,6 +27,7 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'iteceofficial@gmail.com' ||
+        request.auth.token.email == 'mahmoedart@gmail.com' ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
@@ -39,12 +40,13 @@ service cloud.firestore {
         data.travelers is number && data.travelers > 0 && data.travelers <= 1000 &&
         data.packageOrTour is string && data.packageOrTour.size() <= 200 &&
         data.totalPrice is number && data.totalPrice >= 0 &&
-        data.paymentStatus in ['Menunggu Konfirmasi', 'Lunas', 'Selesai', 'Dibatalkan'] &&
+        data.paymentStatus in ['Menunggu Konfirmasi', 'DP 30%', 'Lunas', 'Selesai', 'Dibatalkan'] &&
         (!('email' in data) || (data.email is string && data.email.size() <= 120)) &&
-        (!('arrivalDate' in data) || (data.arrivalDate is string && data.arrivalDate.size() <= 30)) &&
+        (!('arrivalDate' in data) || (data.arrivalDate is string && data.arrivalDate.size() <= 40)) &&
+        (!('travelDate' in data) || (data.travelDate is string && data.travelDate.size() <= 40)) &&
         (!('meetingTime' in data) || (data.meetingTime is string && data.meetingTime.size() <= 100)) &&
         (!('meetingPoint' in data) || (data.meetingPoint is string && data.meetingPoint.size() <= 250)) &&
-        (!('notes' in data) || (data.notes is string && data.notes.size() <= 2000));
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 3000));
     }
 
     // Bookings collection
@@ -101,6 +103,18 @@ service cloud.firestore {
     match /testimonials/{testimonialId} {
       allow read: if true;
       allow write: if isValidId(testimonialId);
+    }
+
+    // Experiences collection
+    match /experiences/{experienceId} {
+      allow read: if true;
+      allow write: if isValidId(experienceId);
+    }
+
+    // Team Guides collection
+    match /teamGuides/{guideId} {
+      allow read: if true;
+      allow write: if isValidId(guideId);
     }
 
     // Website Site Settings

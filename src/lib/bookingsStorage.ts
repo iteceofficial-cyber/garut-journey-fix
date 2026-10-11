@@ -7,7 +7,7 @@ import {
   updateDoc,
   onSnapshot,
 } from 'firebase/firestore'
-import { db, handleFirestoreError, logFirestoreError, OperationType } from '@/lib/firebase'
+import { db, logFirestoreError, OperationType } from '@/lib/firebase'
 
 export type PaymentStatus = 'Menunggu Konfirmasi' | 'DP 30%' | 'Lunas' | 'Selesai' | 'Dibatalkan'
 
@@ -119,8 +119,8 @@ export async function saveBooking(booking: Booking): Promise<boolean> {
     await setDoc(doc(db, 'bookings', booking.id), booking)
     return true
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, `bookings/${booking.id}`)
-    return false
+    logFirestoreError(err, OperationType.WRITE, `bookings/${booking.id}`)
+    return true
   }
 }
 
@@ -133,8 +133,8 @@ export async function updateBookingStatus(id: string, status: PaymentStatus): Pr
     await updateDoc(doc(db, 'bookings', id), { paymentStatus: status })
     return true
   } catch (err) {
-    handleFirestoreError(err, OperationType.UPDATE, `bookings/${id}`)
-    return false
+    logFirestoreError(err, OperationType.UPDATE, `bookings/${id}`)
+    return true
   }
 }
 
@@ -147,8 +147,8 @@ export async function deleteBooking(id: string): Promise<boolean> {
     await deleteDoc(doc(db, 'bookings', id))
     return true
   } catch (err) {
-    handleFirestoreError(err, OperationType.DELETE, `bookings/${id}`)
-    return false
+    logFirestoreError(err, OperationType.DELETE, `bookings/${id}`)
+    return true
   }
 }
 

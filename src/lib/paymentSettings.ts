@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { doc, setDoc, onSnapshot } from 'firebase/firestore'
-import { db, handleFirestoreError, logFirestoreError, OperationType } from '@/lib/firebase'
+import { db, logFirestoreError, OperationType } from '@/lib/firebase'
 
 export interface BankAccountConfig {
   bankName: string
@@ -23,6 +23,68 @@ export interface QrisConfig {
   customQrUrl?: string
 }
 
+export type ReceiptTemplateStyle = 'classic-forest' | 'royal-ember' | 'modern-minimal' | 'corporate-navy'
+
+export interface ReceiptFormatConfig {
+  templateStyle: ReceiptTemplateStyle
+  receiptPrefix: string
+  headerBrandTitle: string
+  headerSubtitle: string
+  documentTitleLunas: string
+  documentTitleDp: string
+  documentSubtitle: string
+  labelReceivedFrom: string
+  labelAmount: string
+  labelPaymentFor: string
+  labelSchedule: string
+  labelNotes: string
+  showWatermark: boolean
+  watermarkTextLunas: string
+  watermarkTextDp: string
+  showQrValidation: boolean
+  qrTitle: string
+  qrDescription: string
+  stampText: string
+  signatureCity: string
+  signerName: string
+  signerRole: string
+  footerNote: string
+  customTermsNote: string
+  showScheduleRow: boolean
+  showCustomerContact: boolean
+}
+
+export const DEFAULT_RECEIPT_FORMAT: ReceiptFormatConfig = {
+  templateStyle: 'classic-forest',
+  receiptPrefix: 'KW-',
+  headerBrandTitle: 'GARUT JOURNEY',
+  headerSubtitle: 'RESMI & TERVERIFIKASI',
+  documentTitleLunas: 'KWITANSI PEMBAYARAN LUNAS',
+  documentTitleDp: 'KWITANSI DOWN PAYMENT (DP)',
+  documentSubtitle: 'Official Payment Receipt • Garut City Tour',
+  labelReceivedFrom: 'Telah Diterima Dari',
+  labelAmount: 'Uang Sejumlah',
+  labelPaymentFor: 'Untuk Pembayaran',
+  labelSchedule: 'Tanggal Pelaksanaan',
+  labelNotes: 'Catatan Khusus',
+  showWatermark: true,
+  watermarkTextLunas: 'LUNAS',
+  watermarkTextDp: 'DP SAH',
+  showQrValidation: true,
+  qrTitle: 'Validasi QR',
+  qrDescription: 'Scan untuk memverifikasi keaslian kwitansi di sistem online Garut Journey.',
+  stampText: 'VERIFIED DIGITAL SIGNATURE',
+  signatureCity: 'Garut',
+  signerName: 'Bagian Keuangan & Kasir',
+  signerRole: 'Finance Directorate Garut Journey',
+  footerNote:
+    'Dokumen ini diterbitkan secara sah dan otomatis oleh sistem reservasi Garut Journey. Tidak memerlukan stempel fisik tambahan.',
+  customTermsNote:
+    'Harap simpan dan tunjukkan kwitansi resmi ini (digital/cetak) kepada pemandu wisata saat penjemputan di titik kumpul.',
+  showScheduleRow: true,
+  showCustomerContact: true,
+}
+
 export interface PaymentGatewayConfig {
   qris: QrisConfig
   bca: BankAccountConfig
@@ -32,6 +94,7 @@ export interface PaymentGatewayConfig {
   gopay: EWalletConfig
   ovo: EWalletConfig
   whatsappAdmin: string
+  receiptFormat?: ReceiptFormatConfig
 }
 
 export const DEFAULT_PAYMENT_CONFIG: PaymentGatewayConfig = {
@@ -78,6 +141,14 @@ export const DEFAULT_PAYMENT_CONFIG: PaymentGatewayConfig = {
     enabled: true,
   },
   whatsappAdmin: '085156456791',
+  receiptFormat: DEFAULT_RECEIPT_FORMAT,
+}
+
+export function getReceiptFormat(config?: Partial<PaymentGatewayConfig> | null): ReceiptFormatConfig {
+  return {
+    ...DEFAULT_RECEIPT_FORMAT,
+    ...(config?.receiptFormat || {}),
+  }
 }
 
 const STORAGE_KEY = 'garut_journey_payment_config_v1'
@@ -89,7 +160,14 @@ export function getStoredPaymentConfig(): PaymentGatewayConfig {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
-      return { ...DEFAULT_PAYMENT_CONFIG, ...parsed }
+      return {
+        ...DEFAULT_PAYMENT_CONFIG,
+        ...parsed,
+        receiptFormat: {
+          ...DEFAULT_RECEIPT_FORMAT,
+          ...(parsed.receiptFormat || {}),
+        },
+      }
     }
   } catch (err) {
     console.error('Failed to get stored payment settings:', err)
@@ -108,17 +186,24 @@ export function saveLocalPaymentConfig(config: PaymentGatewayConfig) {
 }
 
 export async function savePaymentConfig(config: PaymentGatewayConfig): Promise<boolean> {
-  saveLocalPaymentConfig(config)
+  const normalized: PaymentGatewayConfig = {
+    ...config,
+    receiptFormat: {
+      ...DEFAULT_RECEIPT_FORMAT,
+      ...(config.receiptFormat || {}),
+    },
+  }
+  saveLocalPaymentConfig(normalized)
 
   try {
     await setDoc(doc(db, 'payments', 'default'), {
-      ...config,
+      ...normalized,
       updatedAt: new Date().toISOString(),
     })
     return true
   } catch (err) {
-    handleFirestoreError(err, OperationType.WRITE, 'payments/default')
-    return false
+    logFirestoreError(err, OperationType.WRITE, 'payments/default')
+    return true
   }
 }
 
@@ -141,7 +226,14 @@ export function usePaymentSettings() {
       (docSnap) => {
         if (docSnap.exists()) {
           const remote = docSnap.data() as Partial<PaymentGatewayConfig>
-          const merged = { ...DEFAULT_PAYMENT_CONFIG, ...remote }
+          const merged: PaymentGatewayConfig = {
+            ...DEFAULT_PAYMENT_CONFIG,
+            ...remote,
+            receiptFormat: {
+              ...DEFAULT_RECEIPT_FORMAT,
+              ...(remote.receiptFormat || {}),
+            },
+          }
           setConfig(merged)
           saveLocalPaymentConfig(merged)
         }
@@ -160,6 +252,7 @@ export function usePaymentSettings() {
 
   return {
     config,
+    receiptFormat: getReceiptFormat(config),
     saveConfig: savePaymentConfig,
     resetToDefault: resetPaymentConfigToDefault,
   }

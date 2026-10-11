@@ -11,6 +11,51 @@ const SETTINGS_EVENT = 'garut_site_settings_updated'
 export type HeaderAnimationType = 'none' | 'subtle-glow' | 'floating-particles' | 'gradient-shimmer'
 export type FooterAnimationType = 'none' | 'subtle-glow' | 'floating-particles' | 'wave-motion'
 export type HeroDarkness = 'light' | 'medium' | 'dark'
+export type HeroBgType = 'image' | 'video'
+
+export interface HeroVideoPreset {
+  id: string
+  label: string
+  desc: string
+  url: string
+  poster: string
+  recommendedLoopSeconds: number
+}
+
+export const HERO_VIDEO_PRESETS: HeroVideoPreset[] = [
+  {
+    id: 'garut-misty-highland',
+    label: 'Kabut Pagi Pegunungan & Lembah Hijau',
+    desc: 'Aerial sinematik lembah hijau berkabut ala Swiss van Java',
+    url: 'https://assets.mixkit.co/videos/preview/mixkit-aerial-view-of-foggy-mountains-41569-large.mp4',
+    poster: 'hero.png',
+    recommendedLoopSeconds: 6,
+  },
+  {
+    id: 'volcano-crater-sunrise',
+    label: 'Puncak Gunung & Awan Vulkanik',
+    desc: 'Panorama lautan awan di atas puncak pegunungan',
+    url: 'https://assets.mixkit.co/videos/preview/mixkit-clouds-moving-over-the-mountains-41573-large.mp4',
+    poster: 'papandayan.png',
+    recommendedLoopSeconds: 5,
+  },
+  {
+    id: 'tropical-waterfall-nature',
+    label: 'Air Terjun & Hutan Tropis Asri',
+    desc: 'Aliran air terjun jernih di tengah pepohonan rimbun',
+    url: 'https://assets.mixkit.co/videos/preview/mixkit-waterfall-in-forest-2213-large.mp4',
+    poster: 'darajat.png',
+    recommendedLoopSeconds: 5,
+  },
+  {
+    id: 'serene-lake-waves',
+    label: 'Danau Tenang &Pantai Selatan',
+    desc: 'Kilau air tenang di waktu matahari terbit',
+    url: 'https://assets.mixkit.co/videos/preview/mixkit-aerial-view-of-sea-waves-hitting-rocks-41572-large.mp4',
+    poster: 'santolo.png',
+    recommendedLoopSeconds: 6,
+  },
+]
 
 export interface SiteSettings {
   name: string
@@ -34,8 +79,12 @@ export interface SiteSettings {
   socialTikTok: string
   socialFacebook: string
   socialYouTube: string
-  // Hero section
+  // Hero / Header Background section
+  heroBgType?: HeroBgType
   heroBackground: string
+  heroVideoUrl?: string
+  heroVideoLoopSeconds?: number
+  heroVideoPlaybackSpeed?: number
   heroBgDarkness: HeroDarkness
   heroZoomEffect: boolean
   heroTitleLine1?: string
@@ -145,7 +194,11 @@ export const initialSiteSettings: SiteSettings = {
   socialFacebook: defaultSite.socials.facebook,
   socialYouTube: defaultSite.socials.youtube,
   defaultLanguage: 'id',
+  heroBgType: 'image',
   heroBackground: 'hero.png',
+  heroVideoUrl: HERO_VIDEO_PRESETS[0].url,
+  heroVideoLoopSeconds: 5,
+  heroVideoPlaybackSpeed: 1,
   heroBgDarkness: 'medium',
   heroZoomEffect: false,
   heroTitleLine1: 'Temukan Keindahan',
@@ -260,11 +313,18 @@ export async function saveSiteSettings(settings: Partial<SiteSettings>): Promise
   if (updated.faviconUrl && updated.faviconUrl.startsWith('data:')) {
     void persistMedia('site-custom-favicon', updated.faviconUrl)
   }
+  if (updated.heroVideoUrl && updated.heroVideoUrl.startsWith('data:video/')) {
+    await persistMedia('site-hero-video', updated.heroVideoUrl)
+  }
 
   saveLocalSiteSettings(updated)
 
   try {
-    await setDoc(doc(db, 'settings', 'default'), updated)
+    const firestorePayload: SiteSettings = { ...updated }
+    if (firestorePayload.heroVideoUrl && firestorePayload.heroVideoUrl.length > 600_000) {
+      firestorePayload.heroVideoUrl = 'idb:site-hero-video'
+    }
+    await setDoc(doc(db, 'settings', 'default'), firestorePayload)
     return true
   } catch (err) {
     logFirestoreError(err, OperationType.WRITE, 'settings/default')
