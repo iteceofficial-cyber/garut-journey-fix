@@ -171,6 +171,24 @@ export interface SiteSettings {
   whatsappShowFab?: boolean
   whatsappFabPosition?: 'right' | 'left'
   whatsappPulseEffect?: boolean
+  // Simple Website & Section Visibility Controls (Editable by Admin)
+  simpleWebsiteMode?: boolean
+  hideImageTextBadges?: boolean
+  showWhyGarut?: boolean
+  showDestinations?: boolean
+  showCityTours?: boolean
+  showExperience?: boolean
+  showCulinary?: boolean
+  showItinerary?: boolean
+  showPackages?: boolean
+  showGallery?: boolean
+  showTeam?: boolean
+  showCompanyProfile?: boolean
+  showBrandStory?: boolean
+  showTestimonials?: boolean
+  showTravelGuide?: boolean
+  showBookingBanner?: boolean
+  showContact?: boolean
   updatedAt?: string
 }
 
@@ -279,6 +297,24 @@ export const initialSiteSettings: SiteSettings = {
   whatsappShowFab: true,
   whatsappFabPosition: 'right',
   whatsappPulseEffect: true,
+  // Simple Website Defaults (cleaner, faster, streamlined flow)
+  simpleWebsiteMode: true,
+  hideImageTextBadges: true,
+  showWhyGarut: true,
+  showDestinations: true,
+  showCityTours: true,
+  showExperience: false, // simplified
+  showCulinary: true,
+  showItinerary: false, // simplified
+  showPackages: true,
+  showGallery: true,
+  showTeam: false, // simplified
+  showCompanyProfile: true,
+  showBrandStory: false, // simplified
+  showTestimonials: true,
+  showTravelGuide: true,
+  showBookingBanner: true,
+  showContact: true,
 }
 
 export function getStoredSiteSettings(): SiteSettings {

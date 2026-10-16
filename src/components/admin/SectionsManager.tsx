@@ -86,7 +86,7 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string, isError?
   const packages = useTourPackages()
   const { settings, saveSiteSettings } = useSiteSettings()
 
-  const [subTab, setSubTab] = useState<'gallery' | 'culinary' | 'experiences' | 'banners' | 'team' | 'headings'>('gallery')
+  const [subTab, setSubTab] = useState<'visibility' | 'gallery' | 'culinary' | 'experiences' | 'banners' | 'team' | 'headings'>('visibility')
 
   // --- 1. Culinary Form State ---
   const [editingDishId, setEditingDishId] = useState<string | null>(null)
@@ -420,13 +420,24 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string, isError?
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
+            onClick={() => setSubTab('visibility')}
+            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider transition ${
+              subTab === 'visibility' ? 'bg-forest text-white shadow-sm' : 'bg-cream text-ink/70 hover:bg-ink/10'
+            }`}
+          >
+            <Sparkles className="h-3.5 w-3.5 text-ember" />
+            <span>Seksi &amp; Tampilan Simple</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setSubTab('gallery')}
             className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider transition ${
               subTab === 'gallery' ? 'bg-forest text-white shadow-sm' : 'bg-cream text-ink/70 hover:bg-ink/10'
             }`}
           >
             <Upload className="h-3.5 w-3.5" />
-            <span>Upload & Galeri Foto ({gallery.length})</span>
+            <span>Upload &amp; Galeri Foto ({gallery.length})</span>
           </button>
 
           <button
@@ -503,6 +514,140 @@ export function SectionsManager({ onNotify }: { onNotify: (msg: string, isError?
           </button>
         )}
       </div>
+
+      {/* 0. SECTION VISIBILITY & SIMPLE WEBSITE MANAGER */}
+      {subTab === 'visibility' && (
+        <div className="space-y-8 animate-fade-in">
+          <div className="rounded-3xl bg-white p-6 sm:p-8 shadow-soft border border-ink/5 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-ink/10 pb-5">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-widest text-ember">
+                  Kontrol Tampilan &amp; Kesederhanaan Website
+                </span>
+                <h2 className="font-display text-2xl font-semibold text-forest mt-1">
+                  Atur Seksi Beranda &amp; Mode Simple
+                </h2>
+                <p className="text-xs text-ink/65 mt-1 max-w-xl">
+                  Aktifkan atau nonaktifkan seksi tertentu di halaman depan. Gunakan opsi mode simple untuk membuat website lebih ringkas, elegan, dan fokus pada pemesanan tour.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await saveSiteSettings({
+                      simpleWebsiteMode: true,
+                      hideImageTextBadges: true,
+                      showWhyGarut: true,
+                      showDestinations: true,
+                      showCityTours: true,
+                      showExperience: false,
+                      showCulinary: true,
+                      showItinerary: false,
+                      showPackages: true,
+                      showGallery: true,
+                      showTeam: false,
+                      showCompanyProfile: true,
+                      showBrandStory: false,
+                      showTestimonials: true,
+                      showTravelGuide: true,
+                      showBookingBanner: true,
+                      showContact: true,
+                    })
+                    onNotify('Mode Super Simple berhasil diaktifkan! Halaman depan kini lebih bersih, cepat, dan ringkas.')
+                  }}
+                  className="rounded-full bg-forest px-4 py-2.5 text-xs font-bold text-white shadow-soft hover:bg-forest-700 transition flex items-center gap-1.5"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+                  <span>Mode Simple (Rekomendasi)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await saveSiteSettings({
+                      simpleWebsiteMode: false,
+                      hideImageTextBadges: false,
+                      showWhyGarut: true,
+                      showDestinations: true,
+                      showCityTours: true,
+                      showExperience: true,
+                      showCulinary: true,
+                      showItinerary: true,
+                      showPackages: true,
+                      showGallery: true,
+                      showTeam: true,
+                      showCompanyProfile: true,
+                      showBrandStory: true,
+                      showTestimonials: true,
+                      showTravelGuide: true,
+                      showBookingBanner: true,
+                      showContact: true,
+                    })
+                    onNotify('Semua seksi halaman depan diaktifkan kembali.')
+                  }}
+                  className="rounded-full border border-ink/20 px-4 py-2.5 text-xs font-semibold text-ink/75 hover:bg-ink/5 transition"
+                >
+                  Tampilkan Semua Seksi
+                </button>
+              </div>
+            </div>
+
+            {/* Checklist of all 15 sections */}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                { key: 'showWhyGarut', label: 'Mengapa Garut (Why Garut)', desc: 'Keunggulan geografis & kultur', defaultVal: true },
+                { key: 'showDestinations', label: 'Destinasi Populer', desc: 'Daftar objek wisata terbaik', defaultVal: true },
+                { key: 'showCityTours', label: 'Paket City Tour', desc: 'Rute harian kota Garut', defaultVal: true },
+                { key: 'showPackages', label: 'Paket Wisata Spesial', desc: 'All-inclusive trip & harga per orang', defaultVal: true },
+                { key: 'showCulinary', label: 'Wisata Kuliner Otentik', desc: 'Dodol, baso aci, burayot, liwet', defaultVal: true },
+                { key: 'showGallery', label: 'Galeri Dokumentasi Foto', desc: 'Potret lanskap & kegiatan wisata', defaultVal: true },
+                { key: 'showCompanyProfile', label: 'Profil & Legalitas Perusahaan', desc: 'NIB, legalitas, & kredibilitas', defaultVal: true },
+                { key: 'showTestimonials', label: 'Ulasan & Testimoni Tamu', desc: 'Review dari wisatawan nyata', defaultVal: true },
+                { key: 'showTravelGuide', label: 'Panduan & Artikel Wisata', desc: 'Tips liburan & catatan rute', defaultVal: true },
+                { key: 'showBookingBanner', label: 'Banner Reservasi Cepat', desc: 'Ajakan pesan tiket langsung', defaultVal: true },
+                { key: 'showContact', label: 'Formulir Kontak & WhatsApp', desc: 'Hubungi reservasi dan CS', defaultVal: true },
+                { key: 'showExperience', label: 'Pilih Pengalaman (Experience)', desc: 'Trekking, healing, budaya', defaultVal: false },
+                { key: 'showItinerary', label: 'Kalkulator Itinerary Interaktif', desc: 'Rancang jadwal trip mandiri', defaultVal: false },
+                { key: 'showTeam', label: 'Tim Guide Pramuwisata HPI', desc: 'Profil pemandu lokal berlisensi', defaultVal: false },
+                { key: 'showBrandStory', label: 'Cerita Brand (Brand Story)', desc: 'Narasi pendiri & sejarah', defaultVal: false },
+              ].map((item) => {
+                const isEnabled = (settings as any)[item.key] !== false && (item.defaultVal || Boolean((settings as any)[item.key]))
+                return (
+                  <label
+                    key={item.key}
+                    className={`flex items-start gap-3 rounded-2xl border p-4 cursor-pointer transition ${
+                      isEnabled
+                        ? 'border-forest/30 bg-forest/5 shadow-sm'
+                        : 'border-ink/10 bg-cream/20 opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isEnabled}
+                      onChange={async (e) => {
+                        await saveSiteSettings({
+                          [item.key]: e.target.checked,
+                        })
+                        onNotify(`Seksi "${item.label}" telah ${e.target.checked ? 'diaktifkan' : 'dinonaktifkan'}.`)
+                      }}
+                      className="mt-1 rounded text-forest focus:ring-forest"
+                    />
+                    <div>
+                      <span className="font-display text-xs font-bold text-ink block">{item.label}</span>
+                      <span className="text-[0.68rem] text-ink/60 block mt-0.5">{item.desc}</span>
+                      <span className={`inline-block mt-1 text-[0.6rem] font-bold uppercase tracking-wider ${isEnabled ? 'text-forest' : 'text-zinc-400'}`}>
+                        {isEnabled ? '● Ditampilkan' : '○ Disembunyikan'}
+                      </span>
+                    </div>
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 1. GALLERY MANAGER WITH IMAGE UPLOAD */}
       {subTab === 'gallery' && (

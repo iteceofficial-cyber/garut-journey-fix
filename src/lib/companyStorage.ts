@@ -45,6 +45,10 @@ export function getStoredCompanyProfile(): CompanyProfileData {
           typeof parsed.enableDownPayment === 'boolean'
             ? parsed.enableDownPayment
             : COMPANY_PROFILE.enableDownPayment ?? true,
+        showTermsAndConditionsSection:
+          typeof parsed.showTermsAndConditionsSection === 'boolean'
+            ? parsed.showTermsAndConditionsSection
+            : false,
       }
     }
   } catch (err) {

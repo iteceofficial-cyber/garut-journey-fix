@@ -72,7 +72,13 @@ import {
   type HeaderAnimationType,
   type FooterAnimationType,
   type HeroDarkness,
+  type HeroBgType,
+  HERO_VIDEO_PRESETS,
 } from '@/lib/siteSettings'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
+import { BookingEditModal } from '@/components/admin/BookingEditModal'
+import { TrafficEditModal } from '@/components/admin/TrafficEditModal'
+import { HeroVideoManager } from '@/components/admin/HeroVideoManager'
 import {
   type LanguageCode,
   SUPPORTED_LANGUAGES,
@@ -153,7 +159,7 @@ function generateSlug(text: string): string {
 export function AdminDashboard() {
   const { articles, saveArticle, deleteArticle, resetToDefault } = useArticles()
   const { settings, saveSiteSettings } = useSiteSettings()
-  const { bookings, updateStatus, removeBooking } = useBookings()
+  const { bookings, addBooking, updateStatus, removeBooking } = useBookings()
   const { prices, updatePrice } = useTourPrices()
   const { destinations: allDestinations, saveDestination, removeDestination } = useDestinations()
   const {
@@ -162,7 +168,40 @@ export function AdminDashboard() {
     resetToDefault: resetPaymentConfig,
   } = usePaymentSettings()
 
-  const { traffic, simulateBoost, resetTraffic } = useTrafficAnalytics()
+  const { traffic, simulateBoost, resetTraffic, updateMetrics } = useTrafficAnalytics()
+
+  // Booking Edit & Create Modal
+  const [bookingModalMode, setBookingModalMode] = useState<'create' | 'edit' | null>(null)
+  const [editingBookingItem, setEditingBookingItem] = useState<Booking | null>(null)
+
+  // Traffic Edit Modal
+  const [showTrafficEditModal, setShowTrafficEditModal] = useState<boolean>(false)
+
+  // In-app Confirmation Dialog (replaces window.confirm)
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    isDestructive?: boolean
+    onConfirm: () => void
+  } | null>(null)
+
+  const askConfirmation = (title: string, message: string, onConfirm: () => void, isDestructive = false) => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      isDestructive,
+      onConfirm: () => {
+        setConfirmModal(null)
+        onConfirm()
+      },
+    })
+  }
+
+  // Hero Video Form State
+  const [heroBgType, setHeroBgType] = useState<HeroBgType>(settings.heroBgType || 'image')
+  const [heroVideoUrl, setHeroVideoUrl] = useState<string>(settings.heroVideoUrl || HERO_VIDEO_PRESETS[0].url)
 
   // Authentication state (User must type credentials)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
@@ -521,11 +560,15 @@ export function AdminDashboard() {
   }
 
   const handleResetPaymentSettings = () => {
-    if (window.confirm('Kembalikan rekening bank & e-wallet ke nilai default?')) {
-      resetPaymentConfig()
-      setPaySettingsForm(DEFAULT_PAYMENT_CONFIG)
-      notifySuccess('Pengaturan pembayaran telah di-reset ke nilai awal.')
-    }
+    askConfirmation(
+      'Reset Rekening Pembayaran',
+      'Kembalikan rekening bank & e-wallet ke nilai default awal?',
+      () => {
+        resetPaymentConfig()
+        setPaySettingsForm(DEFAULT_PAYMENT_CONFIG)
+        notifySuccess('Pengaturan pembayaran telah di-reset ke nilai awal.')
+      }
+    )
   }
 
   // Handle Login: MUST enter username and password
@@ -580,15 +623,19 @@ export function AdminDashboard() {
 
   // Handle Logout with confirmation
   const handleLogout = () => {
-    if (window.confirm('Apakah Anda yakin ingin keluar (Log Out) dari WP Admin?')) {
-      setIsAuthenticated(false)
-      setLoginUser('')
-      setLoginPass('')
-      setLoginError(null)
-      localStorage.removeItem('garut_journey_admin_auth')
-      sessionStorage.removeItem('garut_journey_admin_auth')
-      notifySuccess('Berhasil keluar (Log Out). Silakan login kembali jika diperlukan.')
-    }
+    askConfirmation(
+      'Konfirmasi Log Out',
+      'Apakah Anda yakin ingin keluar dari panel WP Admin?',
+      () => {
+        setIsAuthenticated(false)
+        setLoginUser('')
+        setLoginPass('')
+        setLoginError(null)
+        localStorage.removeItem('garut_journey_admin_auth')
+        sessionStorage.removeItem('garut_journey_admin_auth')
+        notifySuccess('Berhasil keluar (Log Out). Silakan login kembali jika diperlukan.')
+      }
+    )
   }
 
   // Filtered articles
@@ -777,23 +824,29 @@ export function AdminDashboard() {
   }
 
   const handleDelete = async (slugToDelete: string, articleTitle: string) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus artikel "${articleTitle}"?`)) {
-      const deleted = await deleteArticle(slugToDelete)
-      if (deleted) {
-        notifySuccess(`Artikel "${articleTitle}" berhasil dihapus.`)
-      }
-    }
+    askConfirmation(
+      'Hapus Artikel',
+      `Apakah Anda yakin ingin menghapus artikel "${articleTitle}"?`,
+      async () => {
+        const deleted = await deleteArticle(slugToDelete)
+        if (deleted) {
+          notifySuccess(`Artikel "${articleTitle}" berhasil dihapus.`)
+        }
+      },
+      true
+    )
   }
 
   const handleReset = () => {
-    if (
-      window.confirm(
-        'Kembalikan daftar artikel ke versi bawaan awal? Semua artikel yang ditambahkan admin akan di-reset.'
-      )
-    ) {
-      resetToDefault()
-      notifySuccess('Daftar artikel telah di-reset ke versi bawaan.')
-    }
+    askConfirmation(
+      'Reset Daftar Artikel',
+      'Kembalikan daftar artikel ke versi bawaan awal? Semua artikel yang ditambahkan admin akan di-reset.',
+      () => {
+        resetToDefault()
+        notifySuccess('Daftar artikel telah di-reset ke versi bawaan.')
+      },
+      true
+    )
   }
 
   // Handle Save Website Settings
@@ -825,6 +878,8 @@ export function AdminDashboard() {
       socialYouTube: socialYouTube.trim() || initialSiteSettings.socialYouTube,
       footerTagline: footerTagline.trim() || initialSiteSettings.footerTagline,
       defaultLanguage: siteLanguage,
+      heroBgType,
+      heroVideoUrl,
       heroBackground: finalBg,
       heroBgDarkness,
       heroZoomEffect,
@@ -949,10 +1004,15 @@ export function AdminDashboard() {
   }
 
   const handleDeleteDest = async (slugToDelete: string, name: string) => {
-    if (window.confirm(`Hapus destinasi "${name}"?`)) {
-      await removeDestination(slugToDelete)
-      notifySuccess(`Destinasi "${name}" berhasil dihapus.`)
-    }
+    askConfirmation(
+      'Hapus Destinasi',
+      `Apakah Anda yakin ingin menghapus destinasi "${name}"?`,
+      async () => {
+        await removeDestination(slugToDelete)
+        notifySuccess(`Destinasi "${name}" berhasil dihapus.`)
+      },
+      true
+    )
   }
 
   const handleStatusChange = async (bookingId: string, newStatus: PaymentStatus) => {
@@ -996,13 +1056,18 @@ export function AdminDashboard() {
   }
 
   const handleDeleteBooking = async (bookingId: string) => {
-    if (window.confirm(`Hapus data booking ${bookingId}?`)) {
-      await removeBooking(bookingId)
-      notifySuccess(`Data booking ${bookingId} berhasil dihapus.`)
-      if (selectedBookingDetail?.id === bookingId) {
-        setSelectedBookingDetail(null)
-      }
-    }
+    askConfirmation(
+      'Hapus Data Booking',
+      `Apakah Anda yakin ingin menghapus data booking #${bookingId}? Data tidak dapat dikembalikan.`,
+      async () => {
+        await removeBooking(bookingId)
+        notifySuccess(`Data booking #${bookingId} berhasil dihapus.`)
+        if (selectedBookingDetail?.id === bookingId) {
+          setSelectedBookingDetail(null)
+        }
+      },
+      true
+    )
   }
 
   // Direct WhatsApp chat to customer with Arrival Date & Meeting Point
@@ -1617,8 +1682,8 @@ Tim Garut Journey`
               </div>
             </div>
 
-            {/* Search & Status Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center rounded-2xl bg-white p-4 shadow-soft border border-ink/5">
+            {/* Search, Status Filters & Tambah Booking Manual */}
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center rounded-2xl bg-white p-4 shadow-soft border border-ink/5">
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink/40" />
                 <input
@@ -1630,20 +1695,34 @@ Tim Garut Journey`
                 />
               </div>
 
-              {/* Status Filter Pills */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-                {(['All', 'Menunggu Konfirmasi', 'DP 30%', 'Lunas', 'Selesai', 'Dibatalkan'] as const).map((st) => (
-                  <button
-                    key={st}
-                    type="button"
-                    onClick={() => setBookingStatusFilter(st)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition shrink-0 ${
-                      bookingStatusFilter === st ? 'bg-forest text-white' : 'bg-ink/5 text-ink/75 hover:bg-ink/10'
-                    }`}
-                  >
-                    {st === 'All' ? `Semua (${bookings.length})` : st}
-                  </button>
-                ))}
+              {/* Status Filter Pills & Add Button */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                  {(['All', 'Menunggu Konfirmasi', 'DP 30%', 'Lunas', 'Selesai', 'Dibatalkan'] as const).map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setBookingStatusFilter(st)}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition shrink-0 ${
+                        bookingStatusFilter === st ? 'bg-forest text-white' : 'bg-ink/5 text-ink/75 hover:bg-ink/10'
+                      }`}
+                    >
+                      {st === 'All' ? `Semua (${bookings.length})` : st}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingBookingItem(null)
+                    setBookingModalMode('create')
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-forest px-4 py-2 text-xs font-bold text-white shadow-soft hover:bg-forest-700 transition shrink-0"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>+ Tambah Booking Manual</span>
+                </button>
               </div>
             </div>
 
@@ -1808,6 +1887,20 @@ Tim Garut Journey`
                           <span>Kirim Kwitansi</span>
                         </button>
 
+                        {/* Edit Booking Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingBookingItem(b)
+                            setBookingModalMode('edit')
+                          }}
+                          className="inline-flex items-center gap-1 rounded-xl bg-forest/10 px-2.5 py-1.5 text-xs font-bold text-forest hover:bg-forest hover:text-white transition shadow-sm"
+                          title="Edit rincian data booking pelanggan"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
+                          <span>Edit</span>
+                        </button>
+
                         {/* Detail Modal Trigger */}
                         <button
                           type="button"
@@ -1880,11 +1973,24 @@ Tim Garut Journey`
                   </button>
                   <button
                     type="button"
+                    onClick={() => setShowTrafficEditModal(true)}
+                    className="rounded-full bg-white/20 hover:bg-white/30 px-4 py-2.5 text-xs font-bold text-white transition flex items-center gap-1.5 shadow-sm"
+                    title="Edit Metrik & Statistik Kunjungan"
+                  >
+                    <Edit3 className="h-3.5 w-3.5" />
+                    <span>Edit Metrik Trafik</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => {
-                      if (window.confirm('Reset data analitik trafik ke nilai awal?')) {
-                        resetTraffic()
-                        notifySuccess('Statistik pengunjung telah di-reset ke nilai awal.')
-                      }
+                      askConfirmation(
+                        'Reset Statistik Trafik',
+                        'Kembalikan data analitik trafik pengunjung ke nilai awal?',
+                        () => {
+                          resetTraffic()
+                          notifySuccess('Statistik pengunjung telah di-reset ke nilai awal.')
+                        }
+                      )
                     }}
                     className="rounded-full bg-white/10 hover:bg-white/20 px-3.5 py-2.5 text-xs font-semibold text-cream transition flex items-center gap-1.5"
                     title="Reset Data Trafik"
@@ -4334,79 +4440,97 @@ Tim Garut Journey`
                   </div>
                 </div>
 
-                {/* Mode Pilihan Background */}
+                {/* Hero Video & Image Background Manager */}
                 <div className="pt-2 border-t border-ink/10 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
-                      Gambar Latar Belakang Header / Hero
-                    </label>
-                    <div className="flex rounded-xl bg-cream/70 p-1 text-xs font-semibold">
-                      <button
-                        type="button"
-                        onClick={() => setUseCustomHeroBg(false)}
-                        className={`rounded-lg px-3 py-1.5 transition ${
-                          !useCustomHeroBg ? 'bg-white shadow text-forest font-bold' : 'text-ink/60 hover:text-ink'
-                        }`}
-                      >
-                        Foto Pilihan Garut
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setUseCustomHeroBg(true)}
-                        className={`rounded-lg px-3 py-1.5 transition ${
-                          useCustomHeroBg ? 'bg-white shadow text-forest font-bold' : 'text-ink/60 hover:text-ink'
-                        }`}
-                      >
-                        URL Foto Kustom
-                      </button>
-                    </div>
-                  </div>
+                  <HeroVideoManager
+                    heroBgType={heroBgType}
+                    heroVideoUrl={heroVideoUrl}
+                    heroBgDarkness={heroBgDarkness}
+                    heroZoomEffect={heroZoomEffect}
+                    onUpdate={(data) => {
+                      if (data.heroBgType !== undefined) setHeroBgType(data.heroBgType)
+                      if (data.heroVideoUrl !== undefined) setHeroVideoUrl(data.heroVideoUrl)
+                      if (data.heroBgDarkness !== undefined) setHeroBgDarkness(data.heroBgDarkness)
+                      if (data.heroZoomEffect !== undefined) setHeroZoomEffect(data.heroZoomEffect)
+                    }}
+                    onNotify={(msg, isErr) => (isErr ? setErrorMsg(msg) : notifySuccess(msg))}
+                  />
 
-                  {!useCustomHeroBg ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {[
-                        { file: 'hero.png', label: 'Panorama Lembah Garut' },
-                        { file: 'papandayan.png', label: 'Kawah Papandayan' },
-                        { file: 'bagendit.png', label: 'Situ Bagendit' },
-                        { file: 'santolo.png', label: 'Pantai Santolo' },
-                        { file: 'darajat.png', label: 'Darajat Pass' },
-                        { file: 'cangkuang.png', label: 'Candi Cangkuang' },
-                      ].map((item) => (
-                        <button
-                          key={item.file}
-                          type="button"
-                          onClick={() => setHeroBackground(item.file)}
-                          className={`group relative aspect-[16/10] overflow-hidden rounded-2xl border-2 transition ${
-                            heroBackground === item.file && !useCustomHeroBg
-                              ? 'border-forest ring-2 ring-forest/30 shadow-md'
-                              : 'border-transparent opacity-80 hover:opacity-100'
-                          }`}
-                        >
-                          <Img file={item.file} alt={item.label} className="h-full w-full object-cover" width={240} />
-                          <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/20 to-transparent" />
-                          <span className="absolute bottom-2 inset-x-2 text-[0.75rem] font-bold text-white text-left truncate">
-                            {item.label}
-                          </span>
-                          {heroBackground === item.file && !useCustomHeroBg && (
-                            <span className="absolute top-2 right-2 rounded-full bg-forest p-1 text-white shadow">
-                              <Check className="h-3 w-3" />
-                            </span>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div>
-                      <input
-                        type="url"
-                        placeholder="https://images.unsplash.com/photo-..."
-                        value={customHeroBg}
-                        onChange={(e) => setCustomHeroBg(e.target.value)}
-                        className="w-full rounded-xl border border-ink/20 bg-white p-3 text-sm text-ink focus:border-forest focus:outline-none"
-                      />
-                      <p className="mt-1 text-[0.7rem] text-ink/50">
-                        Gunakan tautan gambar beresolusi tinggi (format JPG, PNG, atau WebP).
-                      </p>
+                  {heroBgType === 'image' && (
+                    <div className="rounded-2xl border border-ink/10 bg-cream/30 p-5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                          Pilihan Foto Latar Header
+                        </label>
+                        <div className="flex rounded-xl bg-white p-1 text-xs font-semibold shadow-sm">
+                          <button
+                            type="button"
+                            onClick={() => setUseCustomHeroBg(false)}
+                            className={`rounded-lg px-3 py-1.5 transition ${
+                              !useCustomHeroBg ? 'bg-forest shadow text-white font-bold' : 'text-ink/60 hover:text-ink'
+                            }`}
+                          >
+                            Foto Pilihan Garut
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setUseCustomHeroBg(true)}
+                            className={`rounded-lg px-3 py-1.5 transition ${
+                              useCustomHeroBg ? 'bg-forest shadow text-white font-bold' : 'text-ink/60 hover:text-ink'
+                            }`}
+                          >
+                            URL Foto Kustom
+                          </button>
+                        </div>
+                      </div>
+
+                      {!useCustomHeroBg ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {[
+                            { file: 'hero.png', label: 'Panorama Lembah Garut' },
+                            { file: 'papandayan.png', label: 'Kawah Papandayan' },
+                            { file: 'bagendit.png', label: 'Situ Bagendit' },
+                            { file: 'santolo.png', label: 'Pantai Santolo' },
+                            { file: 'darajat.png', label: 'Darajat Pass' },
+                            { file: 'cangkuang.png', label: 'Candi Cangkuang' },
+                          ].map((item) => (
+                            <button
+                              key={item.file}
+                              type="button"
+                              onClick={() => setHeroBackground(item.file)}
+                              className={`group relative aspect-[16/10] overflow-hidden rounded-2xl border-2 transition ${
+                                heroBackground === item.file && !useCustomHeroBg
+                                  ? 'border-forest ring-2 ring-forest/30 shadow-md'
+                                  : 'border-transparent opacity-80 hover:opacity-100'
+                              }`}
+                            >
+                              <Img file={item.file} alt={item.label} className="h-full w-full object-cover" width={240} />
+                              <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/20 to-transparent" />
+                              <span className="absolute bottom-2 inset-x-2 text-[0.75rem] font-bold text-white text-left truncate">
+                                {item.label}
+                              </span>
+                              {heroBackground === item.file && !useCustomHeroBg && (
+                                <span className="absolute top-2 right-2 rounded-full bg-forest p-1 text-white shadow">
+                                  <Check className="h-3 w-3" />
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div>
+                          <input
+                            type="url"
+                            placeholder="https://images.unsplash.com/photo-..."
+                            value={customHeroBg}
+                            onChange={(e) => setCustomHeroBg(e.target.value)}
+                            className="w-full rounded-xl border border-ink/20 bg-white p-3 text-sm text-ink focus:border-forest focus:outline-none"
+                          />
+                          <p className="mt-1 text-[0.7rem] text-ink/50">
+                            Gunakan tautan gambar beresolusi tinggi (format JPG, PNG, atau WebP).
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -5157,6 +5281,55 @@ Tim Garut Journey`
             </div>
           </div>
         )}
+
+        {/* Modal: Tambah / Edit Booking Pelanggan */}
+        <BookingEditModal
+          isOpen={bookingModalMode !== null}
+          mode={bookingModalMode || 'create'}
+          booking={editingBookingItem}
+          tourOptions={Object.keys(prices).concat([
+            'Garut One-Day City Tour',
+            'Papandayan Volcano & Highland Trek',
+            'Darajat Pass Hot Springs & Waterpark',
+            'Situ Bagendit Heritage & Raft',
+            'Custom Private Tour Garut',
+          ])}
+          onSave={async (savedBooking) => {
+            await addBooking(savedBooking)
+            setBookingModalMode(null)
+            setEditingBookingItem(null)
+            notifySuccess(
+              bookingModalMode === 'create'
+                ? 'Booking baru berhasil ditambahkan secara manual!'
+                : `Rincian booking #${savedBooking.id} berhasil diperbarui!`
+            )
+          }}
+          onClose={() => {
+            setBookingModalMode(null)
+            setEditingBookingItem(null)
+          }}
+        />
+
+        {/* Modal: Edit Metrik Trafik Pengunjung */}
+        <TrafficEditModal
+          isOpen={showTrafficEditModal}
+          traffic={traffic}
+          onSave={(metrics) => {
+            updateMetrics(metrics)
+            notifySuccess('Parameter trafik & analitik pengunjung berhasil diperbarui!')
+          }}
+          onClose={() => setShowTrafficEditModal(false)}
+        />
+
+        {/* In-app Confirmation Modal (No window.confirm) */}
+        <ConfirmDialog
+          isOpen={Boolean(confirmModal?.isOpen)}
+          title={confirmModal?.title || 'Konfirmasi Tindakan'}
+          message={confirmModal?.message || 'Apakah Anda yakin ingin melanjutkan tindakan ini?'}
+          isDestructive={Boolean(confirmModal?.isDestructive)}
+          onConfirm={() => confirmModal?.onConfirm()}
+          onCancel={() => setConfirmModal(null)}
+        />
       </main>
     </div>
   )

@@ -16,30 +16,33 @@ import { Testimonials } from '@/components/home/Testimonials'
 import { TravelGuide } from '@/components/home/TravelGuide'
 import { WhyGarut } from '@/components/home/WhyGarut'
 import { ScrollToBottomFab } from '@/components/home/ScrollToBottomFab'
+import { useSiteSettings } from '@/lib/siteSettings'
 
 export const Route = createFileRoute('/')({
   component: Home,
 })
 
 function Home() {
+  const { settings } = useSiteSettings()
+
   return (
     <>
       <Hero />
-      <WhyGarut />
-      <Destinations />
-      <CityTours />
-      <ChooseExperience />
-      <Culinary />
-      <ItineraryBuilder />
-      <Packages />
-      <Gallery />
-      <TeamGuides />
-      <CompanyProfile />
-      <BrandStory />
-      <Testimonials />
-      <TravelGuide />
-      <Booking />
-      <Contact />
+      {settings.showWhyGarut !== false && <WhyGarut />}
+      {settings.showDestinations !== false && <Destinations />}
+      {settings.showCityTours !== false && <CityTours />}
+      {Boolean(settings.showExperience) && <ChooseExperience />}
+      {settings.showCulinary !== false && <Culinary />}
+      {Boolean(settings.showItinerary) && <ItineraryBuilder />}
+      {settings.showPackages !== false && <Packages />}
+      {settings.showGallery !== false && <Gallery />}
+      {Boolean(settings.showTeam) && <TeamGuides />}
+      {settings.showCompanyProfile !== false && <CompanyProfile />}
+      {Boolean(settings.showBrandStory) && <BrandStory />}
+      {settings.showTestimonials !== false && <Testimonials />}
+      {settings.showTravelGuide !== false && <TravelGuide />}
+      {settings.showBookingBanner !== false && <Booking />}
+      {settings.showContact !== false && <Contact />}
       <ScrollToBottomFab />
     </>
   )

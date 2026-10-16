@@ -65,7 +65,8 @@ export function CompanyLegalManager({ onNotify }: { onNotify?: (msg: string, isE
 
   const handleRemoveBank = (index: number) => {
     if (formData.bankAccounts.length <= 1) {
-      alert('Minimal harus ada 1 rekening bank resmi.')
+      onNotify?.('Minimal harus ada 1 rekening bank resmi.', true)
+      setErrorMsg('Minimal harus ada 1 rekening bank resmi.')
       return
     }
     const list = formData.bankAccounts.filter((_, i) => i !== index)
@@ -869,6 +870,21 @@ export function CompanyLegalManager({ onNotify }: { onNotify?: (msg: string, isE
               </label>
               <p className="mt-1 text-[0.7rem] text-ink/60 pl-6">
                 Jika aktif, pelanggan dapat memilih membayar DP (misal 30%) atau Bayar Lunas (100%) saat checkout.
+              </p>
+            </div>
+
+            <div>
+              <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-ink/80 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.showTermsAndConditionsSection === true}
+                  onChange={(e) => handleFieldChange('showTermsAndConditionsSection', e.target.checked)}
+                  className="rounded text-forest focus:ring-forest"
+                />
+                <span>Tampilkan Blok Syarat &amp; Ketentuan di Beranda (Default: Dinonaktifkan)</span>
+              </label>
+              <p className="mt-1 text-[0.7rem] text-ink/60 pl-6">
+                Hilangkan centang ini untuk menyembunyikan kotak teks Syarat &amp; Ketentuan di halaman depan agar website tampak bersih dan ringkas.
               </p>
             </div>
 

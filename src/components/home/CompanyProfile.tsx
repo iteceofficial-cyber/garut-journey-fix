@@ -270,8 +270,8 @@ export function CompanyProfile() {
           ))}
         </div>
 
-        {/* Syarat & Ketentuan Resmi Perjalanan (Editable by Admin) */}
-        {p.termsAndConditions && p.termsAndConditions.length > 0 && (
+        {/* Syarat & Ketentuan Resmi Perjalanan (Hanya jika diaktifkan admin, default tersembunyi sesuai permintaan) */}
+        {p.showTermsAndConditionsSection && p.termsAndConditions && p.termsAndConditions.length > 0 && (
           <Reveal delay={180} className="mt-12 rounded-[2.25rem] bg-white p-8 sm:p-10 shadow-soft border border-ink/5">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-ink/10 pb-5">
               <div>

@@ -119,13 +119,11 @@ export function SeoManager({ onNotify }: SeoManagerProps) {
   }
 
   const handleReset = async () => {
-    if (window.confirm('Kembalikan konfigurasi SEO ke standar rekomendasi terbaik Google?')) {
-      await resetSeo()
-      setForm(DEFAULT_SEO_SETTINGS)
-      setUseCustomOg(false)
-      setCustomOgUrl('')
-      onNotify('Pengaturan SEO telah di-reset ke standar optimal.')
-    }
+    await resetSeo()
+    setForm(DEFAULT_SEO_SETTINGS)
+    setUseCustomOg(false)
+    setCustomOgUrl('')
+    onNotify('Pengaturan SEO telah di-reset ke standar optimal.')
   }
 
   const activeOgImage = useCustomOg && customOgUrl.trim() ? customOgUrl : form.ogImage

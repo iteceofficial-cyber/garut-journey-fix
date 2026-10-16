@@ -159,21 +159,33 @@ export function Hero() {
 
   return (
     <section id="hero" aria-label="Welcome" className="relative isolate flex min-h-[100svh] items-end overflow-hidden bg-ink text-cream">
-      {/* Dynamic Background Image controlled by WP Admin */}
+      {/* Dynamic Background Image or Video controlled by WP Admin */}
       <div
         ref={bg}
         className={`absolute inset-[-12%_0] -z-10 will-change-transform ${
           settings.heroZoomEffect ? 'scale-105 transition-transform duration-[12000ms] ease-out' : ''
         }`}
       >
-        <Img
-          file={bgImage}
-          alt="Sunrise over the volcanoes and rice terraces of Garut"
-          sizes="100vw"
-          eager
-          fallback="hero.png"
-          className="h-full w-full object-cover"
-        />
+        {settings.heroBgType === 'video' && settings.heroVideoUrl ? (
+          <video
+            key={settings.heroVideoUrl}
+            src={settings.heroVideoUrl}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <Img
+            file={bgImage}
+            alt="Sunrise over the volcanoes and rice terraces of Garut"
+            sizes="100vw"
+            eager
+            fallback="hero.png"
+            className="h-full w-full object-cover"
+          />
+        )}
       </div>
 
       {/* Atmospheric Overlays */}
@@ -182,22 +194,14 @@ export function Hero() {
 
       {/* Main Hero Content */}
       <div className="mx-auto w-full max-w-7xl px-5 pb-24 pt-36 lg:px-8 lg:pb-28">
-        {/* Top Badges */}
-        <div className="flex flex-col items-start gap-2.5">
-          <div className="inline-flex items-center gap-2.5 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-[0.75rem] font-bold uppercase tracking-[0.25em] backdrop-blur text-cream shadow-soft">
-            <span className="h-2 w-2 rounded-full bg-ember" />
-            <span>{settings.name || 'Garut Journey'}</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <h2 className="font-display text-base sm:text-lg font-semibold uppercase tracking-[0.22em] text-ember drop-shadow-md">
-              {settings.subtitle || 'Explore Swiss van Java'}
-            </h2>
-            <span className="hidden sm:inline-block h-1 w-1 rounded-full bg-cream/40" />
-            <span className="hidden sm:inline-block text-xs font-medium text-cream/70 tracking-wider">
-              {t.hero.eyebrow}
-            </span>
-          </div>
+        {/* Simple & Clean Brand Header */}
+        <div className="inline-flex items-center gap-2.5 rounded-full bg-white/10 px-3.5 py-1 text-xs font-bold uppercase tracking-[0.22em] text-cream backdrop-blur border border-white/15">
+          <span className="h-2 w-2 rounded-full bg-ember" />
+          <span>{settings.name || 'Garut Journey'}</span>
+          <span className="opacity-40">·</span>
+          <span className="font-medium text-cream/80 lowercase first-letter:uppercase tracking-normal">
+            {settings.subtitle || 'Swiss van Java'}
+          </span>
         </div>
 
         <h1 className="font-display mt-5 max-w-5xl text-[3.25rem] font-light leading-[0.95] tracking-tight sm:text-7xl lg:text-[7.5rem]">

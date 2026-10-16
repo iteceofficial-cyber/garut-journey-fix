@@ -54,6 +54,7 @@ export interface CompanyProfileData {
   }[]
   downPaymentPercentage?: number
   enableDownPayment?: boolean
+  showTermsAndConditionsSection?: boolean
   termsAndConditions: string[]
   updatedAt?: string
 }
@@ -155,6 +156,7 @@ export const COMPANY_PROFILE: CompanyProfileData = {
   ],
   downPaymentPercentage: 30,
   enableDownPayment: true,
+  showTermsAndConditionsSection: false,
   termsAndConditions: [
     'Pemesanan paket wisata (booking) dinyatakan sah setelah peserta melakukan pembayaran Down Payment (DP) sebesar 30% dari total biaya trip atau pembayaran penuh (Full Payment 100%).',
     'Sisa pelunasan sebesar 70% (bagi yang memilih opsi DP 30%) wajib dilunasi paling lambat H-1 sebelum keberangkatan atau saat penjemputan di titik kumpul (Meeting Point).',

@@ -16,15 +16,17 @@ export function DestinationCard({ d, large = false }: { d: Destination; large?: 
           sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
           className="h-full w-full object-cover transition duration-[1.2s] ease-out group-hover:scale-[1.07]"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink/40 to-transparent opacity-0 transition duration-500 group-hover:opacity-100" />
-        <span className="absolute left-4 top-4 rounded-full bg-cream/95 px-3 py-1 text-[0.7rem] font-bold uppercase tracking-widest text-forest backdrop-blur">
-          {d.categories[0]}
-        </span>
+        <div className="absolute inset-0 bg-gradient-to-t from-ink/30 to-transparent opacity-0 transition duration-500 group-hover:opacity-100" />
       </div>
       <div className="flex flex-1 flex-col p-6">
-        <p className="flex items-center gap-1.5 text-xs font-medium text-ink/55">
-          <MapPin className="h-3.5 w-3.5 text-ember" /> {d.location}
-        </p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="flex items-center gap-1.5 text-xs font-medium text-ink/55">
+            <MapPin className="h-3.5 w-3.5 text-ember" /> {d.location}
+          </p>
+          <span className="text-[0.68rem] font-bold uppercase tracking-wider text-forest/80 bg-forest/5 px-2.5 py-0.5 rounded-full">
+            {d.categories[0]}
+          </span>
+        </div>
         <h3 className="font-display mt-2 text-2xl text-ink">{d.name}</h3>
         <p className="mt-2 flex-1 leading-relaxed text-ink/65">{d.short}</p>
 

@@ -357,6 +357,20 @@ export function resetTrafficData(): TrafficData {
   return initial
 }
 
+export function updateTrafficData(custom: Partial<TrafficData>): TrafficData {
+  const current = getStoredTraffic()
+  const updated: TrafficData = {
+    ...current,
+    ...custom,
+    lastUpdated: new Date().toISOString(),
+  }
+  try {
+    localStorage.setItem(TRAFFIC_STORAGE_KEY, JSON.stringify(updated))
+    window.dispatchEvent(new CustomEvent(TRAFFIC_EVENT, { detail: updated }))
+  } catch {}
+  return updated
+}
+
 /** Hook for live traffic analytics in Admin / WP Admin */
 export function useTrafficAnalytics() {
   const [traffic, setTraffic] = useState<TrafficData>(generateInitialTraffic)
@@ -411,5 +425,7 @@ export function useTrafficAnalytics() {
     traffic,
     simulateBoost: simulateTrafficBoost,
     resetTraffic: resetTrafficData,
+    updateMetrics: updateTrafficData,
   }
 }
+
